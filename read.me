@@ -1,0 +1,139 @@
+<section class="hero scroll-animate" id="home">
+        <h1>EMEAT</h1>
+        <p>PREMIUM MEATS, JUST A CLICK AWAY.</p>
+        <div class="button-container">
+            <a href="#shop" class="custom-btn">
+              <span class="icon-circle">
+                <i class="ri-arrow-right-line"></i>
+              </span>
+              Browse
+            </a>
+            <a href="#feature" class="custom-btn">
+              Learn More <span class="plus-icon">+</span>
+            </a>
+          </div>
+      </section>
+      <section class="features scroll-animate" id="feature">
+        <div class="feature-item">
+          <i class="ri-restaurant-2-line"></i> <!-- You can replace with any relevant icon -->
+          <h3>Only organic nutrition</h3>
+          <p>High-quality organic nutrition for your meats.</p>
+        </div>
+        <div class="feature-item">
+          <i class="ri-archive-2-line"></i> <!-- Icon for packaging -->
+          <h3>Convenient vacuum packaging</h3>
+          <p>Fresh meat, vacuum-sealed for convenience.</p>
+        </div>
+        <div class="feature-item">
+          <i class="ri-award-line"></i> <!-- Icon for certificates -->
+          <h3>International quality certifications</h3>
+          <p>Our meats meet international quality standards.</p>
+        </div>
+        <div class="feature-item">
+          <i class="ri-knife-line"></i> <!-- Icon for meat cutting -->
+          <h3>Professional meat cutting</h3>
+          <p>Precision cutting for your perfect meal.</p>
+        </div>
+      </section>
+      <section class="about scroll-animate" id="feature">
+        <div class="about-container">
+          <h3>About</h3>
+          <h2>ABOUT EMEAT</h2>
+          <p>
+            At EMEAT, we take pride in being your trusted source for high-quality, fresh, and sustainably sourced meats. Our mission is to provide a seamless online shopping experience, ensuring that you get premium cuts delivered straight to your doorstep. Whether you’re cooking for a family meal, hosting a special occasion, or running a business, we offer a diverse selection of beef, pork, and chicken products to meet your needs. With a commitment to exceptional customer service, affordability, and safety, EMEAT is not just about selling meat—it’s about creating moments that matter, one meal at a time.
+          <div class="button-container">
+            <a href="#contact" class="custom-btn">
+              </span>
+              Contact us +
+            </a>
+        </div>
+      </section>
+      <section class="team scroll-animate" id="team">
+        <div class="team-container">
+          <h1>TEAM</h1>
+          <h2>MEET OUR TEAM</h2>
+          <div class="team-members">
+            <div class="team-member">
+              <img src="../website/IMAGES/PROFILES/" alt="Team Member 1">
+              <h3>Cabusao, Ronin</h3>
+              <p></p>
+            </div>
+            <div class="team-member">
+              <img src="../website/IMAGES/PROFILES/VINCE.jpg" alt="Team Member 3">
+              <h3>Cabunilas, Vince Bryant</h3>
+              <p></p>
+            </div>
+            <div class="team-member">
+              <img src="../website/IMAGES/PROFILES/ERICA.jpg" alt="Team Member 4">
+              <h3>Juarez, Erica</h3>
+              <p></p>
+            </div>
+            <div class="team-member">
+              <img src="../website/IMAGES/PROFILES/JUSTINE.jpg" alt="Team Member 5">
+              <h3>Paraiso, Justine</h3>
+              <p></p>
+            </div>
+            <div class="team-member">
+              <img src="../website/IMAGES/PROFILES/" alt="Team Member 5">
+              <h3>Tumbaga, Liezel</h3>
+              <p></p>
+            </div>
+          </div>
+        </div>
+      </section>      
+      </section> 
+
+
+      <footer class="footer" id="contact">
+    <div class="footer-container">
+      <div class="footer-section">
+        <h3>EMEAT</h3>
+        <p>Premium quality meats delivered to your doorstep.</p>
+      </div>
+      <div class="footer-section">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="#home">Home</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#shop">Shop</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Contact Us</h4>
+        <p>Email: contact@emeat.com</p>
+        <p>Phone: +123-456-7890</p>
+      </div>
+      <div class="footer-section">
+        <h4>Follow Us</h4>
+        <div class="social-links">
+          <a href="#"><i class="ri-facebook-circle-line"></i></a>
+          <a href="#"><i class="ri-instagram-line"></i></a>
+          <a href="#"><i class="ri-twitter-line"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 EMEAT. All Rights Reserved.</p>
+    </div>
+  </footer>  
+
+
+  // ✅ Checkout button click event
+    document.getElementById("checkout-button").addEventListener("click", function (e) {
+    // Check if there are any items in the cart
+    const cartItems = document.querySelectorAll('tr[data-order-detail-id]');
+    
+    if (cartItems.length === 0) {
+        e.preventDefault();
+        alert("Your cart is empty. Please add items before checking out.");
+        return;
+    }
+
+    window.location.href = "checkout.php";
+    });
+
+     // // ✅ Checkout button click event
+    // document.getElementById("checkout-button").addEventListener("click", function () {
+    //     window.location.href = "checkout.php";
+    // });

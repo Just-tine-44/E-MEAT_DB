@@ -1,0 +1,151 @@
+<?php
+include('includes/header.php');
+include '../config.php'; // Database connection
+
+session_start();
+
+// Check if user is an admin
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
+    die("Access Denied. Only admins can access this page.");
+}
+
+// Handle status update
+$successMessage = "";
+$errorMessage = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+    $order_id = $_POST['order_id'];
+    $new_status = $_POST['status'];
+    $user_id = $_SESSION['user_id'];
+    $user_type = $_SESSION['user_type'];
+
+    // Call stored procedure
+    $update_sql = "CALL sp_update_order_status(?, ?, ?, ?)";
+    $stmt = $conn->prepare($update_sql);
+    $stmt->bind_param("iiis", $order_id, $new_status, $user_id, $user_type);
+
+    if ($stmt->execute()) {
+        $successMessage = "Order status updated successfully.";
+    } else {
+        $errorMessage = "Error updating status: " . $stmt->error;
+    }
+    $stmt->close();
+}
+
+// Fetch all orders
+$sql = "SELECT o.ORDERS_ID, u.USER_FNAME, u.USER_LNAME, o.TOTAL_AMOUNT, o.ORDERS_DATE, 
+               s.STATUS_NAME, o.STAT_ID, o.MODIFIED_BY, a.USER_FNAME AS ADMIN_FNAME, a.USER_LNAME AS ADMIN_LNAME, o.LAST_UPDATE
+        FROM ORDERS o
+        JOIN APP_USER u ON o.APP_USER_ID = u.APP_USER_ID
+        JOIN STATUS s ON o.STAT_ID = s.STAT_ID
+        LEFT JOIN APP_USER a ON o.MODIFIED_BY = a.APP_USER_ID
+        ORDER BY o.ORDERS_DATE DESC";
+
+$result = $conn->query($sql);
+
+// Fetch all status options
+$status_query = "SELECT * FROM STATUS";
+$status_result = $conn->query($status_query);
+$status_options = [];
+while ($status = $status_result->fetch_assoc()) {
+    $status_options[$status['STAT_ID']] = $status['STATUS_NAME'];
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>All Orders - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
+</head>
+<body class="bg-gray-100">
+    <div class="max-w-7xl mx-auto py-8">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">All Orders</h1>
+
+        <!-- SweetAlert2 Notifications -->
+        <script>
+        <?php if ($successMessage): ?>
+            Swal.fire({
+                title: "Success!",
+                text: "<?= $successMessage ?>",
+                icon: "success",
+                timer: 2000, // Auto-dismiss after 2 seconds
+                showConfirmButton: false
+            });
+        <?php endif; ?>
+
+        <?php if ($errorMessage): ?>
+            Swal.fire({
+                title: "Error!",
+                text: "<?= $errorMessage ?>",
+                icon: "error",
+                timer: 3000, // Auto-dismiss after 3 seconds
+                showConfirmButton: false
+            });
+        <?php endif; ?>
+        </script>
+
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <table class="min-w-full table-auto border-collapse border border-gray-300">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="border px-4 py-2">Order ID</th>
+                        <th class="border px-4 py-2">Customer</th>
+                        <th class="border px-4 py-2">Total Amount</th>
+                        <th class="border px-4 py-2">Order Date</th>
+                        <th class="border px-4 py-2">Status</th>
+                        <th class="border px-4 py-2">Last Modified By</th>
+                        <th class="border px-4 py-2">Last Update</th>
+                        <th class="border px-4 py-2">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($result->num_rows > 0): ?>
+                        <?php while ($row = $result->fetch_assoc()): ?>
+                            <tr class="bg-white border-b hover:bg-gray-100">
+                                <td class="border px-4 py-2"><?= htmlspecialchars($row['ORDERS_ID']) ?></td>
+                                <td class="border px-4 py-2"><?= htmlspecialchars($row['USER_FNAME'] . " " . $row['USER_LNAME']) ?></td>
+                                <td class="border px-4 py-2 text-green-600 font-bold">₱<?= number_format($row['TOTAL_AMOUNT'], 2) ?></td>
+                                <td class="border px-4 py-2"><?= htmlspecialchars($row['ORDERS_DATE']) ?></td>
+                                <td class="border px-4 py-2">
+                                    <span class="px-2 py-1 rounded text-white <?= 
+                                        ($row['STAT_ID'] == 1 ? 'bg-yellow-500' : 
+                                        ($row['STAT_ID'] == 4 ? 'bg-green-500' : 'bg-blue-500')) ?>">
+                                        <?= htmlspecialchars($row['STATUS_NAME']) ?>
+                                    </span>
+                                </td>
+                                <td class="border px-4 py-2">
+                                    <?= $row['MODIFIED_BY'] ? htmlspecialchars($row['ADMIN_FNAME'] . " " . $row['ADMIN_LNAME']) : "Not Updated" ?>
+                                </td>
+                                <td class="border px-4 py-2"><?= $row['LAST_UPDATE'] ?? "N/A" ?></td>
+                                <td class="border px-4 py-2">
+                                    <form method="post" class="flex items-center space-x-2">
+                                        <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
+                                        <select name="status" class="border rounded px-2 py-1">
+                                            <?php foreach ($status_options as $stat_id => $status_name): ?>
+                                                <option value="<?= $stat_id ?>" <?= ($row['STAT_ID'] == $stat_id) ? 'selected' : '' ?>>
+                                                    <?= $status_name ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="submit" name="update_status" class="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded">
+                                            Update
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr><td colspan="8" class="text-center text-gray-600 py-4">No orders found.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+
+<?php $conn->close(); ?>

@@ -1,0 +1,106 @@
+/* General reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #733d3d;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: #333;
+}
+
+/* Container for forms */
+.login-container {
+    background-color: #fffaf0;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Logo styling */
+.form-logo img {
+    width: 100px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+/* Form header */
+.register-form h2,
+.login-form h2 {
+    font-size: 24px;
+    color: #733d3d;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+/* Form group */
+.form-group {
+    margin-bottom: 20px;
+}
+
+/* Input styling */
+.register-form input,
+.register-form select,
+.login-form input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: 2px solid #733d3d;
+    border-radius: 8px;
+    outline: none;
+    background-color: #fffaf0;
+    color: #733d3d;
+}
+
+.register-form input::placeholder,
+.login-form input::placeholder {
+    color: #733d3d;
+}
+
+/* Button styling */
+.login-btn {
+    width: 100%;
+    background-color: #733d3d;
+    color: #fff;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.login-btn:hover {
+    background-color: #733d3d;
+}
+
+/* Register link */
+.register-text {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #733d3d;
+}
+
+.register-text a {
+    color: #733d3d;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.register-text a:hover {
+    text-decoration: underline;
+}
+
+
+
+
+

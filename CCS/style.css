@@ -1,0 +1,1024 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+    --shadow-offset-x: 0px;
+    --shadow-offset-y: 5px;
+    --shadow-blur-radius: 10px;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+  }
+
+* {
+    font-family: "Poppins", serif;
+    scroll-behavior: smooth;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+    background-color: #F7F0E2;
+    margin: 0;
+    padding: 0;
+  }
+  
+  header {
+    background-color: #733D3D;
+    padding: 0.5rem 1rem;
+    box-shadow: var(--shadow-offset-x) var(--shadow-offset-y) var(--shadow-blur-radius) var(--shadow-color);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  header.hidden {
+    transform: translateY(-100%);
+  }
+  
+  header.sticky {
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+  }
+  
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+  }
+  
+  .nav__logo {
+    display: flex;
+    align-items: center;
+    color: #F7F0E2;
+    text-decoration: none;
+    font-size: 1.25rem;
+    padding-left: 20px;
+    font-family: "Montserrat", sans-serif;
+    font-weight: bold;
+  }
+  
+  .nav__logo-img {
+    height: 50px;
+    width: auto;
+    margin-right: 0.5rem;
+  }
+  
+  .nav__menu {
+    list-style-type: none;
+    display: flex;
+    margin: 0;
+    gap: 3rem;
+  }
+  
+  .nav__menu li {
+    margin: 0 1rem;
+  }
+  
+  .nav__menu a {
+    color: #F7F0E2;
+    text-decoration: none;
+    font-size: 1rem;
+  }
+  
+  .nav-icons {
+    display: flex;
+    gap: 1.5rem;
+    padding-right: 20px;
+    
+  }
+  
+  .nav-icons a {
+    color: #F7F0E2;
+    text-decoration: none;
+  }
+  
+  .nav-icons i {
+    font-size: 1.5rem;
+  }
+  
+  .hero {
+    padding: 4rem 1rem;
+    text-align: center;
+  }
+  
+  .hero {
+    padding: 15rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem; /* Adds spacing between elements */
+  }
+  
+  .hero h1 {
+    font-family: "Montserrat", sans-serif;
+    font-weight: 900;
+    font-size: 8rem;
+    color: #733D3D;
+    margin: 0; /* Removes extra margin */
+  }
+  
+  .hero p {
+    font-family: "Montserrat", sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    color: #494949;
+    margin: 0; /* Removes extra margin */
+  }
+  
+  .button-container {
+    color: #F7F0E2;
+    font-family: "Poppins", serif;
+    font-weight: 300;
+    padding-top: 30px;
+    display: flex;
+    gap: 1.5rem; /* Space between buttons */
+    justify-content: center; /* Center buttons horizontally */
+  }
+  
+  
+  .custom-btn .plus-icon {
+    font-size: 1.25rem; /* Plus icon size */
+    margin-left: 0.25rem; /* Space between text and plus */
+  }
+
+  .custom-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #733D3D; /* Button background color */
+    color: #F7F0E2;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 30px;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    gap: 0.5rem; /* Space between the icon circle and text */
+    position: relative;
+  }
+  
+  .custom-btn .icon-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #F7F0E2; /* White circle background */
+    color: #733D3D; /* Arrow icon color */
+    width: 2rem; /* Circle size */
+    height: 2rem; /* Circle size */
+    border-radius: 50%; /* Makes it a perfect circle */
+    font-size: 1rem; /* Arrow icon size */
+    margin-right: 0.5rem; /* Space between circle and text */
+  }
+  
+  .custom-btn:hover {
+    background-color: #5A2D2D; /* Darker shade on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+  }
+  
+  .custom-btn i {
+    font-size: 1.1rem; /* Ensure the icon inside the circle is appropriately sized */
+  }
+
+/* Hover effect for the navigation links */
+.nav__menu a {
+    color: #F7F0E2;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: transform 0.3s ease, color 0.3s ease;
+  }
+  
+  .nav__menu a:hover {
+    transform: scale(1.0); /* Enlarges the link slightly */
+    color: #F1C27D; /* Change color on hover */
+  }
+
+  
+  /* Hover effect for navigation icons */
+  .nav-icons a {
+    color: #F7F0E2;
+    text-decoration: none;
+    transition: transform 0.3s ease, color 0.3s ease;
+  }
+  
+  .nav-icons a:hover {
+    transform: translateY(-3px); /* Slight upward motion */
+    color: #F1C27D; /* Change icon color on hover */
+  }
+  
+  .nav-icons i {
+    font-size: 1.5rem;
+  }
+  
+  /* Additional hover animation for the navigation bar */
+  .nav__menu li {
+    transition: transform 0.3s ease;
+  }
+  
+  .nav__menu li:hover {
+    transform: scale(1.1); /* Slight scale effect for each menu item */
+    
+  }
+  
+  .nav:hover {
+    box-shadow: none; /* Ensure no shadow on hover */
+  }
+
+  .features {
+    margin-top: 65px;
+    background-color: #733D3D;
+    display: flex;
+    justify-content: space-between;
+    padding: 3rem 10%;
+    text-align: center;
+    gap: 3rem;
+  }
+  
+  .feature-item {
+    color: #F7F0E2;
+    font-family: "Montserrat", sans-serif;
+    width: 23%;
+  }
+  
+  .feature-item i {
+    font-size: 3rem; /* Adjust the icon size */
+    margin-bottom: 1rem; /* Space between icon and text */
+    color: #F1C27D;
+  }
+  
+  .feature-item h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .feature-item p {
+    font-size: 1rem;
+    color: #E4D7A0; /* Lighter text color */
+  }
+
+  .about {
+    background-color: #F7F0E2; /* Black background */
+    color: #733D3D; /* White text for contrast */
+    text-align: center;
+    padding: 5rem 2rem;
+  }
+  
+  .about-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .about h3 {
+    font-family: "Poppins", sans-serif;
+    font-size: 1.2rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: #494949; /* Light grey for subtitle */
+    margin-bottom: 0.5rem;
+    letter-spacing: 2px;
+  }
+  
+  .about h2 {
+    font-family: "Montserrat", sans-serif;
+    font-size: 3rem;
+    font-weight: 900;
+    color: #733D3D; /* Bold white for the main title */
+    margin-bottom: 1.5rem;
+  }
+  
+  .about p {
+    font-family: "Poppins", sans-serif;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #494949; /* Light grey for text */
+    margin-bottom: 0.5rem;
+  }
+  
+  .about-button {
+    font-family: "Poppins", sans-serif;
+    background-color: #e63946; /* Bold red for button */
+    color: #ffffff;
+    border: none;
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .about-button:hover {
+    background-color: #bf2f3b; /* Darker red for hover state */
+  }
+  
+  
+  
+  .select-meat-category {
+    background-color: #f7f0e2;
+    padding: 4rem 0;
+    margin-top: 100px;
+    margin-bottom: 200px;
+  }
+  
+  .select-meat-category .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+  
+  .select-meat-category h2 {
+      font-family: "Montserrat", sans-serif;
+      font-size: 3rem;
+      font-weight: 900;
+      color: #733D3D; /* Bold white for the main title */
+      margin-bottom: 3rem;
+      text-align: center;
+  }
+  
+  
+  .search-bar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  
+  .search-bar input {
+    width: 40%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 30px 0 0 30px;
+    background-color: #f1e7d8;
+    color: #494949;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Drop shadow effect */
+}
+
+  .search-bar button {
+    background-color: #733d3d;
+    color: #f7f0e2;
+    border: none;
+    border-radius: 0 30px 30px 0;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .search-bar button:hover {
+    background-color: #5a2d2d;
+  }
+  
+  .meat-categories {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .category-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .category-item img {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1rem;
+    border-radius: 30px;
+  }
+  
+  .category-item h3 {
+    font-family: "Montserrat", sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #733d3d;
+  }
+  
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  
+  .product-item {
+    background-color: #733d3d;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+.product-item:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+}
+
+  
+  .product-image {
+    width: 300px;
+    height: 250px;
+    margin-left:15px ;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f7f0e2;
+    border-radius: 15px;
+    box-shadow: inset 0 8px 20px rgba(0, 0, 0, 0.3); /* Inner shadow */
+  }
+  
+  .product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+  
+  .product-info h3 {
+    font-family: "Montserrat", sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f7f0e2;
+    text-transform: uppercase;
+  }
+  
+  .product-info p {
+    font-family: "Montserrat", sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #F1C27D;
+  }
+  
+  .weight-options {
+    margin-top: 1rem;
+  }
+  
+  .weight-options label {
+    font-size: 0.5rem;
+    font-weight: 300;
+    color: #f7f0e2;
+    margin-bottom: 0.5rem;
+    display: block;
+    text-transform: uppercase;
+  }
+  
+  .weight-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .weight-buttons button {
+    background-color: #f7f0e2;
+    color: #733d3d;
+    font-family: "Montserrat", sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .weight-buttons button:hover {
+    background-color: #5a2d2d;
+    color: #f7f0e2;
+  }
+  
+  .add-to-cart {
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+    margin-top: 1.5rem;
+    background-color: #f7f0e2;
+    color: #733d3d;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.8rem 2rem;
+    border-radius: 25px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s ease;
+  }
+  
+  .add-to-cart:hover {
+    background-color: #5a2d2d;
+    color: #f7f0e2;
+  }
+  
+  
+  .add-to-cart i {
+    font-size: 1.1rem;
+  }
+
+  .weight-options {
+    margin-top: 1rem;
+    text-align: center;
+  }
+  
+  .weight-options label {
+    font-family: "Montserrat", sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #f7f0e2;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  
+  .weight-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .weight-buttons button {
+    background-color: #f7f0e2;
+    color: #733d3d;
+    font-size: 0.9rem;
+    font-family: "Montserrat", sans-serif;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .weight-buttons button:hover {
+    background-color: #5a2d2d;
+    color: #f7f0e2;
+  }
+
+  /* Base styles for meat categories */
+.meat-categories {
+  display: flex;
+  gap: 20px;
+}
+
+.category-item {
+  text-align: center;
+  padding: 10px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  cursor: pointer;
+}
+
+.category-item img {
+  width: 80px;
+  height: auto;
+  transition: transform 0.3s ease;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.2); /* Drop shadow effect */
+}
+
+.category-item h3 {
+  margin-top: 10px;
+  font-size: 1.2em;
+  color: #5a2d2d;
+  transition: color 0.3s ease;
+}
+
+/* Hover effect for category items */
+.category-item:hover {
+  transform: scale(1.05);
+  
+  border-color: #aaa;
+}
+
+.category-item:hover img {
+  transform: scale(1.1); /* Slight zoom on image */
+}
+
+.category-item:hover h3 {
+  color: #733d3d; /* Change text color on hover */
+}
+
+.footer {
+  background-color: #733d3d;
+  color: #f7f0e2;
+  padding: 2rem 0;
+}
+
+.footer-container {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.footer-section {
+  flex: 1;
+  margin: 1rem;
+}
+
+.footer-section h3, .footer-section h4 {
+  margin-bottom: 1rem;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section ul li {
+  margin: 0.5rem 0;
+}
+
+.footer-section ul li a {
+  color: #f7f0e2;
+  text-decoration: none;
+}
+
+.footer-section ul li a:hover {
+  text-decoration: underline;
+}
+
+.social-links a {
+  color: #f7f0e2;
+  margin-right: 1rem;
+  font-size: 1.5rem;
+  text-decoration: none;
+}
+
+.social-links a:hover {
+  color: #f1e7d8;
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.875rem;
+  padding-top: 1rem;
+}
+
+.team {
+  padding: 4rem 2rem;
+  text-align: center;
+  background-color: #f7f0e2;
+}
+
+.team h1 {
+  font-family: "Poppins", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #494949; /* Light grey for subtitle */
+  margin-bottom: 0.5rem;
+  letter-spacing: 2px;
+}
+
+
+.team h2 {
+  font-family: "Montserrat", sans-serif;
+  font-size: 3rem;
+  font-weight: 900;
+  color: #733D3D; /* Bold white for the main title */
+  margin-bottom: 3rem;
+}
+
+.team-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.team-members {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.team-member {
+  background: #733d3d;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 250px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.team-member:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+}
+
+.team-member img {
+  width: 200px;
+  height: 200px;
+  border-radius: 20px;
+  object-fit: cover;
+  margin-bottom: 1rem;
+  background-color: #f7f0e2; /* White background */
+  padding: 10px; /* Adds spacing between the image and the border */
+  box-shadow: inset 0 8px 10px rgba(0, 0, 0, 0.3); /* Inner shadow */
+}
+
+.team-member h3 {
+  font-size: 1.2rem;
+  color: #f7f0e2;
+  margin-bottom: 0.5rem;
+}
+
+.team-member p {
+  font-size: 1rem;
+  color: #f7f0e2;
+}
+
+/* Initial state of elements */
+.scroll-animate {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 0.6s ease-in-out;
+}
+
+/* When elements are in view */
+.scroll-animate.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-animate:nth-child(1) {
+  transition-delay: 0.1s;
+}
+.scroll-animate:nth-child(2) {
+  transition-delay: 0.2s;
+}
+.scroll-animate:nth-child(3) {
+  transition-delay: 0.3s;
+}
+
+/* Add initial state for animations */
+.section-hidden {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+/* Add animation for when the section is in view */
+.section-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cart-section {
+  margin: 5rem auto;
+  max-width: 900px;
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+}
+
+.cart-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  align-items: center;
+  background-color: #733d3d;
+  color: #f7f0e2;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cart-header {
+  font-weight: 500;
+  text-transform: uppercase;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  align-items: center;
+  color: #494949;;
+  padding: 1rem;
+  margin-bottom: 3rem;
+  border-bottom: 1px solid #494949;
+  
+}
+
+
+.cart-item select {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 5px;
+  background-color: #f7f0e2;
+  color: #733d3d;
+}
+
+.cart-item button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.cart-item button i {
+  font-size: 1.5rem;
+  color: #f7f0e2;
+}
+
+.cart-total {
+  margin-top: 2rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.custom-btn {
+  padding: 0.8rem 1.5rem;
+  background-color: #733d3d;
+  color: #f7f0e2;
+  border: none;
+  border-radius: 40px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.custom-btn:hover {
+  background-color: #5a2d2d;
+}
+
+
+.cart-section h2 {
+  font-family: "Montserrat", sans-serif;
+  font-size: 3rem;
+  font-weight: 900;
+  color: #733D3D; /* Bold white for the main title */
+  margin-bottom: 1.5rem;
+}
+
+.cart-section h3 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #733D3D; /* Bold white for the main title */
+  font-family: "Poppins", sans-serif;
+}
+
+.cart-total span {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #733D3D; /* Bold white for the main title */
+  margin-bottom: 1.5rem;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Cart Popup Styling */
+.cart-popup {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgb(105, 208, 105);
+  color: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 1000;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+}
+
+.cart-popup.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cart-popup.hide {
+  opacity: 0;
+  transform: translateY(20px); /* Moves back to the initial position */
+}
+
+.cart-popup-content i {
+  font-size: 18px;
+  color: #f7f0e2; /* Neutral white tone */
+}
+
+.cart-popup-content span {
+  font-weight: 600;
+}
+
+.weight-buttons button.selected {
+  background-color: #f0c14b; /* Highlight color */
+  border-color: #a88734;
+  color: #fff;
+}
+
+.weight-select {
+  box-shadow: inset 0 5px 7px rgba(0, 0, 0, 0.3); /* Inner shadow */
+}
+
+/* User Dropdown Styles */
+.user-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.user-icon {
+  font-size: 24px;
+  cursor: pointer;
+  color: #fffaf0;
+  transition: color 0.3s ease; /* Added transition for color change */
+}
+
+.user-icon:hover {
+  color: #F1C27D;
+}
+
+/* When the user hovers over the user dropdown */
+.user-dropdown:hover .user-icon {
+  color: #F1C27D; /* Change the color when hovering the dropdown */
+}
+
+/* Dropdown content styles */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: #fffaf0;
+  min-width: 160px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  border-radius: 5px; /* Keep the border radius */
+  overflow: hidden; /* Ensures radius is applied during hover */
+}
+
+/* Dropdown content hover behavior */
+.dropdown-content a {
+  color: #733d3d;
+  padding: 10px 15px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-content a:hover {
+  background-color: #f0f0f0;
+}
+
+.user-dropdown:hover .dropdown-content {
+  display: block;
+}
+
+/* Cart Icon Styles */
+.cart-icon-container {
+  position: relative;
+}
+.cart-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #EF4444;
+  color: white;
+  font-size: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+
+  
+  
+
+
+  
+  
+  
+  

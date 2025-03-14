@@ -2,6 +2,12 @@
 include 'config.php';
 session_start();
 
+// // Check if user is logged in, if not redirect to login page
+// if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
+//     header("Location: login.php");
+//     exit();
+// }
+
 // Ensure the user is logged in and store user_id
 $username = $_SESSION['username'] ?? null;
 $user_id = $_SESSION['user_id'] ?? null;

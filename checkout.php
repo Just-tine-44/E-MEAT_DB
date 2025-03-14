@@ -198,7 +198,7 @@ $final_total = $total_amount + $shipping_fee;
                                         </div>
                                         <div>
                                             <p class="font-medium text-gray-800">Standard Delivery</p>
-                                            <p class="text-sm text-gray-500">Delivery in 1-3 business days</p>
+                                            <p class="text-sm text-gray-500">Delivery time depends on your location, ensuring a timely and efficient arrival.</p>
                                         </div>
                                     </div>
                                     <div class="text-right">

@@ -1,6 +1,6 @@
 <?php
 // Start session at the very beginning - BEFORE any output or includes
-session_start();
+// session_start();
 
 // Then include other files
 include('includes/header.php');

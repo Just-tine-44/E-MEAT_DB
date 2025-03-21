@@ -1,3 +1,14 @@
+<?php
+session_start();
+
+// To match what login.php is setting:
+if(!isset($_SESSION['username']) || !isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'admin') {
+    $_SESSION['message'] = "You need to log in as admin to access this page";
+    header("Location: ../login.php");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -6,6 +17,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <meta name="description" content="" />
         <meta name="author" content="" />
+        <link rel="icon" type="image" href="../../WEBSITE/IMAGES/RED LOGO.png">
         <title>Dashboard E-MEAT</title>
         <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
         <link href="css/styles.css" rel="stylesheet" />

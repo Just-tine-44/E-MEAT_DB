@@ -37,6 +37,10 @@ $conn->next_result();
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.css">
   <link rel="stylesheet" href="../CCS/style.css?v=<?php echo time(); ?>">
   <link rel="stylesheet" href="../CCS/tailwind.min.css">
+
+  <!-- SweetAlert2 CSS and JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 <header>
@@ -124,6 +128,35 @@ $conn->next_result();
             </a>
         </div>
       </section>  
+
+      <section class="our-story scroll-animate py-10" style="background-color: #733D3D;">
+        <div class="container mx-auto px-6 max-w-5xl">
+          <div class="story-content text-center">
+        <h2 class="text-4xl font-bold mb-6" style="color: #F7F0E2;">OUR STORY</h2>
+        <div class="w-24 h-1 mx-auto mb-8" style="background-color: #F7F0E2;"></div>
+        <p class="text-lg max-w-3xl mx-auto leading-relaxed mb-12" style="color: #F7F0E2;">
+          Founded with a passion for quality meats, EMEAT started as a small family butcher shop committed to 
+          delivering the finest cuts to local families. Today, we've embraced technology to bring that same
+          dedication to customers nationwide, never compromising on our standards of excellence and freshness.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
+          <div class="p-6 bg-white rounded-lg shadow-sm transition-all duration-300 hover:shadow-md hover:transform hover:scale-105">
+            <i class="ri-heart-line text-4xl mb-4" style="color: #733D3D;"></i>
+            <span class="block text-xl font-semibold text-gray-800">Passion for Quality</span>
+          </div>
+          <div class="p-6 bg-white rounded-lg shadow-sm transition-all duration-300 hover:shadow-md hover:transform hover:scale-105">
+            <i class="ri-truck-line text-4xl mb-4" style="color: #733D3D;"></i>
+            <span class="block text-xl font-semibold text-gray-800">Farm to Table</span>
+          </div>
+          <div class="p-6 bg-white rounded-lg shadow-sm transition-all duration-300 hover:shadow-md hover:transform hover:scale-105">
+            <i class="ri-shield-check-line text-4xl mb-4" style="color: #733D3D;"></i>
+            <span class="block text-xl font-semibold text-gray-800">100% Satisfaction</span>
+          </div>
+        </div>
+          </div>
+        </div>
+      </section>
+              
     <section class="select-meat-category scroll-animate" id="shop">
       <div class="container">
           <h2>SELECT MEAT CATEGORY</h2>
@@ -241,7 +274,6 @@ $conn->next_result();
 </body>
 </html>
 
-
 <script>
   document.addEventListener("DOMContentLoaded", function () {
       document.querySelectorAll('.quantity').forEach(function (input) {
@@ -257,12 +289,24 @@ $conn->next_result();
 
                   if (unit === 'g') {
                       if (value < 100 || value > 950) {
-                          alert("Grams must be between 100g and 950g.");
+                          Swal.fire({
+                              title: 'Invalid Input',
+                              text: "Grams must be between 100g and 950g.",
+                              icon: 'warning',
+                              confirmButtonColor: '#3085d6',
+                              confirmButtonText: 'OK'
+                          });
                           this.value = ''; // Clear input
                       }
                   } else if (unit === 'kg') {
                       if (value <= 0) {
-                          alert("Kilograms must be greater than 0.");
+                          Swal.fire({
+                              title: 'Invalid Input',
+                              text: "Kilograms must be greater than 0.",
+                              icon: 'warning',
+                              confirmButtonColor: '#3085d6',
+                              confirmButtonText: 'OK'
+                          });
                           this.value = ''; // Clear input
                       }
                   }
@@ -296,9 +340,16 @@ document.addEventListener("DOMContentLoaded", function () {
             const qtyInput = productItem.querySelector(".quantity");
             const unitSelect = productItem.querySelector(".unit");
             const availableStock = parseFloat(qtyInput.getAttribute("max"));
+            const stockUnit = qtyInput.getAttribute("data-stock-unit") || "kg"; // Assuming stock is stored in kg by default
 
             if (!qtyInput.value.trim()) {
-                alert("Please enter a quantity.");
+                Swal.fire({
+                    title: 'Missing Information',
+                    text: "Please enter a quantity.",
+                    icon: 'info',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
                 return;
             }
 
@@ -306,13 +357,46 @@ document.addEventListener("DOMContentLoaded", function () {
             const unit = unitSelect.value;
 
             if (isNaN(qty) || qty <= 0) {
-                alert("Please enter a valid quantity.");
+                Swal.fire({
+                    title: 'Invalid Input',
+                    text: "Please enter a valid quantity.",
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
                 return;
             }
 
-            if (qty > availableStock) {
-                alert(`Not enough stock available! Maximum available: ${availableStock}`);
-                qtyInput.value = availableStock;
+            // Convert input quantity to the same unit as stock for comparison
+            let qtyInStockUnit;
+            if (unit === 'g' && stockUnit === 'kg') {
+                qtyInStockUnit = qty / 1000; // Convert grams to kg
+            } else if (unit === 'kg' && stockUnit === 'g') {
+                qtyInStockUnit = qty * 1000; // Convert kg to grams
+            } else {
+                qtyInStockUnit = qty; // Same units, no conversion needed
+            }
+
+            if (qtyInStockUnit > availableStock) {
+                // Calculate max in current unit for display
+                let maxInCurrentUnit;
+                if (unit === 'g' && stockUnit === 'kg') {
+                    maxInCurrentUnit = availableStock * 1000;
+                } else if (unit === 'kg' && stockUnit === 'g') {
+                    maxInCurrentUnit = availableStock / 1000;
+                } else {
+                    maxInCurrentUnit = availableStock;
+                }
+                
+                Swal.fire({
+                    title: 'Stock Limit Exceeded',
+                    text: `Not enough stock available! Maximum available: ${maxInCurrentUnit.toFixed(unit === 'g' ? 0 : 2)} ${unit}`,
+                    icon: 'error',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                
+                qtyInput.value = maxInCurrentUnit.toFixed(unit === 'g' ? 0 : 2);
                 return;
             }
 
@@ -356,19 +440,43 @@ document.addEventListener("DOMContentLoaded", function () {
                         // Clear input after successful add
                         qtyInput.value = '';
                         
-                        // Show success message
-                        alert(data.message);
+                        // Show success message with SweetAlert
+                        Swal.fire({
+                            title: 'Success!',
+                            text: data.message,
+                            icon: 'success',
+                            confirmButtonColor: '#3085d6',
+                            confirmButtonText: 'OK'
+                        });
                     } else {
-                        alert(data.message || "Error adding item to cart");
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || "Error adding item to cart",
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6',
+                            confirmButtonText: 'OK'
+                        });
                     }
                 } catch (error) {
                     console.error("Error parsing JSON:", error, "Raw text:", text);
-                    alert("An error occurred while processing your request.");
+                    Swal.fire({
+                        title: 'Processing Error',
+                        text: "An error occurred while processing your request.",
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
                 }
             })
             .catch(error => {
                 console.error("Fetch Error:", error);
-                alert("An error occurred while processing your request: " + error.message);
+                Swal.fire({
+                    title: 'Network Error',
+                    text: "An error occurred while processing your request: " + error.message,
+                    icon: 'error',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
             });
         });
     });

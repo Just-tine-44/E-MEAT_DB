@@ -130,23 +130,28 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 let lastScrollY = window.scrollY;
+let timeout;
 const header = document.querySelector('header');
 
-window.addEventListener('scroll', () => {
-  const currentScrollY = window.scrollY;
+// Debounce function to limit scroll event execution
+const debounceScroll = () => {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => {
+    const currentScrollY = window.scrollY;
 
-  if (currentScrollY > lastScrollY && currentScrollY > 100) {
-    // User is scrolling down
-    header.classList.add('hidden');
-  } else {
-    // User is scrolling up
-    header.classList.remove('hidden');
-    if (currentScrollY > 50) {
-      header.classList.add('sticky');
+    if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      header.classList.add('hidden');
     } else {
-      header.classList.remove('sticky');
+      header.classList.remove('hidden');
+      if (currentScrollY > 50) {
+        header.classList.add('sticky');
+      } else {
+        header.classList.remove('sticky');
+      }
     }
-  }
 
-  lastScrollY = currentScrollY;
-});
+    lastScrollY = currentScrollY;
+  }, 100); // Adjust debounce delay (100ms is a reasonable value)
+};
+
+window.addEventListener('scroll', debounceScroll);

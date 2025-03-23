@@ -30,15 +30,19 @@ body {
     position: sticky;
     top: 0;
     z-index: 1000;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: top 0.3s ease, opacity 0.3s ease;
   }
   
   header.hidden {
-    transform: translateY(-100%);
+    top: -100px;
+    opacity: 0;
   }
   
   header.sticky {
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 999;
   }
   
   .nav {

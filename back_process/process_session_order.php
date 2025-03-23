@@ -1,6 +1,6 @@
 <?php
 // filepath: c:\xampp\htdocs\website\process_session_order.php
-include 'config.php';
+include '../connection/config.php';
 session_start();
 header('Content-Type: application/json');
 

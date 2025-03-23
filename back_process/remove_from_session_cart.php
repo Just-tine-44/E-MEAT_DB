@@ -1,6 +1,6 @@
 <?php
 // filepath: c:\xampp\htdocs\website\remove_from_session_cart.php
-include 'config.php';
+include '../connection/config.php';
 session_start();
 header('Content-Type: application/json');
 

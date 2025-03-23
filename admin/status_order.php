@@ -1,9 +1,9 @@
 <?php
+$page_title = "Order Management | E-MEAT Admin";
 // session_start();
 
-
 include('includes/header.php');
-include '../config.php'; // Database connection
+include '../connection/config.php'; // Database connection
 
 // Enable error reporting
 ini_set('display_errors', 1);

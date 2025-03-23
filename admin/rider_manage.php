@@ -3,8 +3,9 @@
 // session_start();
 
 // Then include other files
+$page_title = "Manage Riders | E-MEAT Admin";
 include('includes/header.php');
-include '../config.php'; // Database connection
+include '../connection/config.php'; // Database connection
 
 // Enable error reporting
 ini_set('display_errors', 1);

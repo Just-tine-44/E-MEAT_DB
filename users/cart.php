@@ -1,6 +1,6 @@
 <?php
 // filepath: /c:/xampp/htdocs/website/cart.php
-include 'config.php';
+include '../connection/config.php';
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
@@ -50,9 +50,9 @@ if (!empty($product_ids)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Cart | E-MEAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" type="image" href="IMAGES/RED LOGO.png">
+    <link rel="icon" type="image" href="../IMAGES/RED LOGO.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.css">
-    <link rel="stylesheet" href="CCS/style.css">
+    <link rel="stylesheet" href="../CCS/style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -68,17 +68,17 @@ if (!empty($product_ids)) {
     <header>
         <nav class="nav container">
             <a href="index.php" class="nav__logo">
-                <img src="IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
+                <img src="../IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
                 EMEAT
             </a>
             <ul class="nav__menu">
-                <li><a href="index.php #home">Home</a></li>
-                <li><a href="index.php #feature">About</a></li>
-                <li><a href="index.php #shop">Shop</a></li>
-                <li><a href="index.php #contact">Contact</a></li>
+                <li><a href="index.php#home">Home</a></li>
+                <li><a href="index.php#feature">About</a></li>
+                <li><a href="index.php#shop">Shop</a></li>
+                <li><a href="index.php#contact">Contact</a></li>
             </ul>
             <div class="nav-icons">
-                <a href="index.php #shop"><i class="ri-search-line"></i></a>
+                <a href="index.php#shop"><i class="ri-search-line"></i></a>
                 <a href="cart.php" class="cart-icon-container">
                     <i class="ri-shopping-cart-fill"></i>
                     <?php if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0): ?>
@@ -267,7 +267,7 @@ if (!empty($product_ids)) {
         </div>
     </div>
 
-    <script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
     // Helper function to get available quantity
     function getAvailableQuantity(element) {
@@ -290,6 +290,82 @@ if (!empty($product_ids)) {
         document.getElementById('total-amount').textContent = `₱${total.toFixed(2)}`;
         document.getElementById('subtotal').textContent = `₱${total.toFixed(2)}`;
     }
+
+    // Function to update product subtotal
+    function updateProductSubtotal(row, quantity) {
+        const unitElement = row.querySelector(".unit-of-measure");
+        const unitOfMeasure = unitElement ? unitElement.textContent.trim().toUpperCase() : "KG";
+        const unitPriceElement = row.querySelector(".unit-price div");
+        const unitPriceText = unitPriceElement.textContent;
+        const unitPrice = parseFloat(unitPriceText.replace(/[^\d.]/g, ''));
+        
+        // Calculate new total price
+        let newTotalPrice;
+        if (unitOfMeasure === "G") {
+            newTotalPrice = (unitPrice * quantity) / 1000;
+        } else {
+            newTotalPrice = quantity * unitPrice;
+        }
+        
+        // Update total price in the row
+        const totalPriceElement = row.querySelector(".total-price span");
+        totalPriceElement.textContent = `₱${newTotalPrice.toFixed(2)}`;
+        
+        // Update overall total
+        updateTotalAmount();
+    }
+
+    // Handle quantity input changes
+    document.querySelectorAll(".qty-input").forEach(input => {
+        input.addEventListener("change", function() {
+            const row = this.closest("tr");
+            const cartIndex = this.getAttribute("data-cart-index");
+            const meatPartId = this.getAttribute("data-meat-part-id");
+            const unitElement = row.querySelector(".unit-of-measure");
+            const unitOfMeasure = unitElement ? unitElement.textContent.trim() : "KG";
+            const newQuantity = parseFloat(this.value);
+            
+            // Update subtotal immediately for responsive UI
+            updateProductSubtotal(row, newQuantity);
+            
+            // Update database and session via AJAX
+            fetch("../back_process/update_session_cart.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    index: cartIndex,
+                    meat_part_id: meatPartId,
+                    quantity: newQuantity,
+                    unit: unitOfMeasure
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to update quantity');
+                }
+                // Success feedback (optional)
+                console.log("Quantity updated successfully");
+            })
+            .catch(error => {
+                console.error("Error updating quantity:", error);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Failed to update quantity',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            });
+        });
+    });
 
     // Decrease quantity buttons
     document.querySelectorAll(".qty-decrease").forEach(button => {
@@ -403,7 +479,7 @@ if (!empty($product_ids)) {
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Make the request with additional verification data
-                    fetch("remove_from_session_cart.php", {
+                    fetch("../back_process/remove_from_session_cart.php", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ 

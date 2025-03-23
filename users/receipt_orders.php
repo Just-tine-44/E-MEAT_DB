@@ -1,6 +1,6 @@
 <?php
 // filepath: /c:/xampp/htdocs/website/receipt_orders.php
-    include 'config.php';
+    include '../connection/config.php';
     session_start();
     
     // Enable error reporting
@@ -36,9 +36,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Receipts | E-MEAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" type="image/png" href="IMAGES/RED LOGO.png">
+    <link rel="icon" type="image/png" href="../IMAGES/RED LOGO.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.css">
-    <link rel="stylesheet" href="CCS/style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../CCS/style.css?v=<?php echo time(); ?>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
@@ -70,7 +70,7 @@
     <header class="no-print">
         <nav class="nav container">
             <a href="index.php" class="nav__logo">
-                <img src="IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
+                <img src="../IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
                 EMEAT
             </a>
             <ul class="nav__menu">
@@ -339,7 +339,7 @@
                                 <!-- E-MEAT Logo -->
                                 <div class="flex justify-center mt-4">
                                     <div class="flex items-center">
-                                        <img src="IMAGES/RED LOGO.png" alt="E-MEAT Logo" class="h-8 w-8 mr-2">
+                                        <img src="../IMAGES/RED LOGO.png" alt="E-MEAT Logo" class="h-8 w-8 mr-2">
                                         <span class="text-red-600 font-bold">E-MEAT</span>
                                     </div>
                                 </div>

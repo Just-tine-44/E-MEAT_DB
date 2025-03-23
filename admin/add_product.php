@@ -1,9 +1,10 @@
 <?php
+$page_title = "Add New Product | E-MEAT Admin";
 include('includes/header.php');
 ?>
 
 <?php
-include '../config.php'; // Database connection
+include '../connection/config.php'; // Database connection
 session_start();
 
 $product_added = false; // Flag to determine if the product was added

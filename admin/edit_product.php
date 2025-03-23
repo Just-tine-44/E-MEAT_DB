@@ -1,6 +1,7 @@
 <?php
+$page_title = "Edit Product | E-MEAT Admin";
 include('includes/header.php');
-include '../config.php'; // Database connection
+include '../connection/config.php'; // Database connection
 
 // Check if the product ID is provided in the URL
 if (!isset($_GET['id'])) {

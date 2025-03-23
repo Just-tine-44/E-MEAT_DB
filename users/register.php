@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-include 'config.php';
+include '../connection/config.php';
 
 $message = "";
 $message_type = "success";
@@ -100,7 +100,7 @@ if (isset($_POST['submit'])) {
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register | E-MEAT</title>
-    <link rel="icon" type="image" href="../website/IMAGES/RED LOGO.png">
+    <link rel="icon" type="image" href="../IMAGES/RED LOGO">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Remix Icon -->
@@ -124,7 +124,7 @@ if (isset($_POST['submit'])) {
     <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         <!-- Card Top with Logo -->
         <div class="bg-meat-red py-5 px-6 flex justify-center">
-            <img src="../website/IMAGES/RED LOGO.png" alt="E-MEAT Logo" class="h-20 bg-white rounded-full p-2">
+            <img src="../IMAGES/RED LOGO.png" alt="E-MEAT Logo" class="h-20 bg-white rounded-full p-2">
         </div>
         
         <!-- Registration Form -->

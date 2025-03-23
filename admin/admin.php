@@ -1,6 +1,6 @@
 <?php
 include('includes/header.php');
-include '../config.php'; // Database connection
+include '../connection/config.php'; // Database connection
 
 // Fetch total quantity for each category using stored procedure
 $pork_stock = 0;

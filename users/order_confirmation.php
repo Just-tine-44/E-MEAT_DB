@@ -1,6 +1,6 @@
 <?php
 // filepath: /c:/xampp/htdocs/website/order_confirmation.php
-include 'config.php';
+include '../connection/config.php';
 session_start();
 
 // Ensure the user is logged in
@@ -74,9 +74,9 @@ $status_colors = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Orders | E-MEAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" type="image/png" href="IMAGES/RED LOGO.png">
+    <link rel="icon" type="image/png" href="../IMAGES/RED LOGO.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.css">
-    <link rel="stylesheet" href="CCS/style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../CCS/style.css?v=<?php echo time(); ?>">
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
         tailwind.config = {
@@ -124,7 +124,7 @@ $status_colors = [
 <header>
         <nav class="nav container">
             <a href="index.php" class="nav__logo">
-                <img src="IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
+                <img src="../IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
                 EMEAT
             </a>
             <ul class="nav__menu">

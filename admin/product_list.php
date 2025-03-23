@@ -1,6 +1,7 @@
 <?php
+$page_title = "Product Inventory | E-MEAT Admin";
 include('includes/header.php');
-include '../config.php'; // Database connection
+include '../connection/config.php'; // Database connection
 
 try {
     // Fetch all meat products using stored procedure

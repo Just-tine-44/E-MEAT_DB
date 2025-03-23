@@ -1,6 +1,6 @@
 <?php
 // filepath: /c:/xampp/htdocs/website/checkout.php
-include 'config.php';
+include '../connection/config.php';
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
@@ -62,9 +62,9 @@ $final_total = $total_amount + $shipping_fee;
     <title>Checkout | E-MEAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="icon" type="image/png" href="IMAGES/RED LOGO.png">
+    <link rel="icon" type="image/png" href="../IMAGES/RED LOGO.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.css">
-    <link rel="stylesheet" href="CCS/style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../CCS/style.css?v=<?php echo time(); ?>">
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -93,7 +93,7 @@ $final_total = $total_amount + $shipping_fee;
     <header>
         <nav class="nav container">
             <a href="index.php" class="nav__logo">
-                <img src="IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
+                <img src="../IMAGES/WHITE LOGO.png" alt="Emeat Logo" class="nav__logo-img">
                 EMEAT
             </a>
             <ul class="nav__menu">
@@ -425,7 +425,7 @@ $final_total = $total_amount + $shipping_fee;
         }
         
         // Send purchase completion request to new session-based handler
-        fetch('process_session_order.php', {
+        fetch('../back_process/process_session_order.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestData)

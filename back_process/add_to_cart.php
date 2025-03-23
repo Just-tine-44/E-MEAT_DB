@@ -1,6 +1,5 @@
 <?php
-// filepath: c:\xampp\htdocs\website\add_to_cart.php
-include 'config.php';
+include '../connection/config.php';
 session_start();
 header('Content-Type: application/json');
 
@@ -20,17 +19,44 @@ try {
         $user_id = $_SESSION['user_id'];
         $meat_part_id = intval($_POST['meat_part_id']);
         $qty = floatval($_POST['qty']);
-        $unit = strtolower($_POST['unit']); // 'kg' or 'g'
+        $unit = strtoupper($_POST['unit']); // Standardize to uppercase 'KG' or 'G'
+        
+        // Validate inputs
+        if ($meat_part_id <= 0) {
+            throw new Exception("Invalid product selected.");
+        }
+        
+        if ($qty <= 0) {
+            throw new Exception("Quantity must be greater than zero.");
+        }
+        
+        if (!in_array($unit, ['KG', 'G'])) {
+            throw new Exception("Invalid unit of measurement.");
+        }
         
         // Call stored procedure
         $stmt = $conn->prepare("CALL AddToUserCart(?, ?, ?, ?, @success, @message, @is_update, @new_qty, @product_name, @unit_price)");
-        $stmt->bind_param("iids", $user_id, $meat_part_id, $qty, $unit);
-        $stmt->execute();
+        if (!$stmt) {
+            throw new Exception("Database error: " . $conn->error);
+        }
+        
+        // Convert unit to lowercase for database (if your DB expects lowercase)
+        $dbUnit = strtolower($unit);
+        
+        $stmt->bind_param("iids", $user_id, $meat_part_id, $qty, $dbUnit);
+        $result = $stmt->execute();
+        if (!$result) {
+            throw new Exception("Failed to add item: " . $stmt->error);
+        }
         $stmt->close();
         
         // Get output parameters
         $result = $conn->query("SELECT @success as success, @message as message, @is_update as is_update, 
                                @new_qty as new_qty, @product_name as product_name, @unit_price as unit_price");
+        if (!$result) {
+            throw new Exception("Failed to retrieve results: " . $conn->error);
+        }
+        
         $row = $result->fetch_assoc();
         
         if (!$row['success']) {
@@ -45,7 +71,9 @@ try {
         if ($row['is_update']) {
             // Update existing item
             foreach ($_SESSION['cart'] as $key => $item) {
-                if ($item['meat_part_id'] == $meat_part_id && $item['unit'] == $unit) {
+                // Use case-insensitive comparison for unit
+                if ($item['meat_part_id'] == $meat_part_id && 
+                    strtoupper($item['unit']) == $unit) {
                     $_SESSION['cart'][$key]['quantity'] = $row['new_qty'];
                     break;
                 }
@@ -62,7 +90,7 @@ try {
                 'product_name' => $row['product_name'],
                 'unit_price' => $row['unit_price'],
                 'quantity' => $qty,
-                'unit' => $unit,
+                'unit' => $unit, // Store in uppercase
                 'added_at' => date('Y-m-d H:i:s')
             ];
             
@@ -77,6 +105,11 @@ try {
         
         // Update cart count
         $response['cart_count'] = count($_SESSION['cart']);
+        
+        // Clear any remaining result sets
+        while ($conn->more_results()) {
+            $conn->next_result();
+        }
     } else {
         throw new Exception("Invalid request method.");
     }

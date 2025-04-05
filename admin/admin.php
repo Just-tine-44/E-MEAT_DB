@@ -49,7 +49,8 @@ if ($result) {
 $query = "CALL GetSalesOverview()";
 $total_sales_all_time = 0;
 $total_sales_last_1_day = 0;
-$total_sales_today = 0;
+$total_sales_this_week = 0;
+$total_sales_this_month = 0;
 
 if ($conn->multi_query($query)) {
     do {
@@ -59,8 +60,10 @@ if ($conn->multi_query($query)) {
                     $total_sales_all_time = $row['total_sales_all_time'];
                 } elseif (isset($row['total_sales_last_1_day'])) {
                     $total_sales_last_1_day = $row['total_sales_last_1_day'];
-                } elseif (isset($row['total_sales_today'])) {
-                    $total_sales_today = $row['total_sales_today'];
+                } elseif (isset($row['total_sales_this_week'])) {
+                    $total_sales_this_week = $row['total_sales_this_week'];
+                } elseif (isset($row['total_sales_this_month'])) {
+                    $total_sales_this_month = $row['total_sales_this_month'];
                 }
             }
             $result->free();
@@ -79,6 +82,9 @@ if ($conn->multi_query($query)) {
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jsPDF libraries for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         
@@ -172,7 +178,10 @@ if ($conn->multi_query($query)) {
             <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <i class="fas fa-chart-line text-red-500"></i> Sales Overview
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button id="printSalesBtn" class="px-4 py-2 mb-4 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+                <i class="fas fa-print"></i> Print Report
+            </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- All Time Sales -->
                 <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
                     <div class="flex items-center justify-between mb-4">
@@ -188,7 +197,7 @@ if ($conn->multi_query($query)) {
                     <div class="mt-2 text-xs text-gray-400">Since the beginning</div>
                 </div>
 
-                <!-- Last 1 Day Sales -->
+                <!-- Last 24 Hours Sales -->
                 <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
                     <div class="flex items-center justify-between mb-4">
                         <p class="text-sm font-medium text-gray-500">Sales (Last 24 Hours)</p>
@@ -203,19 +212,34 @@ if ($conn->multi_query($query)) {
                     <div class="mt-2 text-xs text-gray-400">Past 24 hours</div>
                 </div>
 
-                <!-- Today's Sales -->
+                <!-- This Week's Sales -->
                 <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
                     <div class="flex items-center justify-between mb-4">
-                        <p class="text-sm font-medium text-gray-500">Today's Sales</p>
-                        <div class="bg-green-100 text-green-800 p-2 rounded-lg">
-                            <i class="fas fa-cash-register"></i>
+                        <p class="text-sm font-medium text-gray-500">This Week's Sales</p>
+                        <div class="bg-purple-100 text-purple-800 p-2 rounded-lg">
+                            <i class="fas fa-calendar-week"></i>
                         </div>
                     </div>
                     <p class="text-2xl font-bold text-gray-800 flex items-center">
                         <span class="text-lg mr-1">₱</span>
-                        <?php echo number_format($total_sales_today, 2); ?>
+                        <?php echo number_format($total_sales_this_week, 2); ?>
                     </p>
-                    <div class="mt-2 text-xs text-gray-400">Since midnight</div>
+                    <div class="mt-2 text-xs text-gray-400">Current week</div>
+                </div>
+
+                <!-- This Month's Sales -->
+                <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-sm font-medium text-gray-500">This Month's Sales</p>
+                        <div class="bg-green-100 text-green-800 p-2 rounded-lg">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-800 flex items-center">
+                        <span class="text-lg mr-1">₱</span>
+                        <?php echo number_format($total_sales_this_month, 2); ?>
+                    </p>
+                    <div class="mt-2 text-xs text-gray-400">Current month</div>
                 </div>
             </div>
         </div>
@@ -287,6 +311,9 @@ if ($conn->multi_query($query)) {
                 </div>
             </div>
             <div class="p-4 border-t border-gray-200 flex justify-end">
+                <button type="button" id="exportCustomerPurchasesBtn" class="px-4 py-2 mr-4 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Export to PDF
+                </button>
                 <button type="button" id="closeModalBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-800">
                     Close
                 </button>
@@ -328,22 +355,22 @@ if ($conn->multi_query($query)) {
         document.querySelectorAll('.customer-link').forEach(function(link) {
             link.addEventListener('click', function(event) {
                 event.preventDefault();
-                const customerName = this.getAttribute('data-customer-name');
-                document.getElementById('purchaseDetailsModalLabel').innerText = customerName + '\'s Purchases';
+                currentCustomerName = this.getAttribute('data-customer-name');
+                document.getElementById('purchaseDetailsModalLabel').innerText = currentCustomerName + '\'s Purchases';
 
-                const purchases = JSON.parse(this.getAttribute('data-customer'));
+                currentCustomerData = JSON.parse(this.getAttribute('data-customer'));
                 const tbody = document.getElementById('purchaseDetailsBody');
                 tbody.innerHTML = '';
 
-                purchases.forEach(function(purchase) {
+                currentCustomerData.forEach(function(purchase) {
                     const row = `
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3">${purchase.meat_category}</td>
-                            <td class="px-4 py-3">${purchase.MEAT_PART_NAME}</td>
+                            <td class="px-4 py-3">${purchase.MEAT_PART_NAME.toUpperCase()}</td>
                             <td class="px-4 py-3">${purchase.total_quantity} ${purchase.UNIT_OF_MEASURE}</td>
                             <td class="px-4 py-3">₱${parseFloat(purchase.UNIT_PRICE).toFixed(2)}</td>
                             <td class="px-4 py-3 font-medium text-green-600">₱${parseFloat(purchase.total_amount).toFixed(2)}</td>
-                            <td class="px-4 py-3">${purchase.order_date}</td>
+                            <td class="px-4 py-3">${new Date(purchase.order_date).toLocaleDateString()}</td>
                         </tr>
                     `;
                     tbody.innerHTML += row;
@@ -352,6 +379,364 @@ if ($conn->multi_query($query)) {
                 modal.classList.remove('hidden');
             });
         });
+    });
+    </script>
+
+    <script>
+        // Fixed JavaScript code for the sales table
+        document.getElementById('printSalesBtn').addEventListener('click', function() {
+            // Create a new window for printing
+            const printWindow = window.open('', '_blank');
+            
+            // Create the print content with proper PHP variable insertion
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>E-MEAT Sales Report</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 40px; }
+                        h1 { color: #333; margin-bottom: 10px; }
+                        .report-date { color: #777; margin-bottom: 30px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+                        th { background-color: #f8f8f8; font-weight: bold; }
+                        .amount { text-align: right; }
+                        .note { font-size: 12px; color: #777; font-style: italic; }
+                    </style>
+                </head>
+                <body>
+                    <h1>E-MEAT Sales Report</h1>
+                    <p class="report-date">Generated on: ${new Date().toLocaleString()}</p>
+                    
+                    <h2>Sales Overview</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time Period</th>
+                                <th class="amount">Amount (PHP)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>All Time Sales</td>
+                                <td class="amount">₱ <?php echo number_format($total_sales_all_time, 2); ?></td>
+                            </tr>
+                            <tr>
+                                <td>Last 24 Hours Sales</td>
+                                <td class="amount">₱ <?php echo number_format($total_sales_last_1_day, 2); ?></td>
+                            </tr>
+                            <tr>
+                                <td>This Week's Sales</td>
+                                <td class="amount">₱ <?php echo number_format($total_sales_this_week, 2); ?></td>
+                            </tr>
+                            <tr>
+                                <td>This Month's Sales</td>
+                                <td class="amount">₱ <?php echo number_format($total_sales_this_month, 2); ?></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <p class="note">This report shows sales performance across different time periods. All amounts are in Philippine Peso (PHP).</p>
+                </body>
+                </html>
+            `);
+            
+            // Trigger print when content is loaded
+            printWindow.document.close();
+            printWindow.onload = function() {
+                printWindow.print();
+                // printWindow.close(); // Uncomment if you want the window to close after printing
+            };
+        });
+    </script>
+
+    <script>
+    // Export customer purchases to PDF directly with jsPDF
+    let currentCustomerData = [];
+    let currentCustomerName = '';
+
+    document.getElementById('exportCustomerPurchasesBtn').addEventListener('click', function() {
+        try {
+            // Access jsPDF from window object
+            const { jsPDF } = window.jspdf;
+            
+            // Initialize PDF document (portrait orientation)
+            const doc = new jsPDF('p', 'pt', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            // Start Y position for content
+            let y = 40;
+            
+            // Add E-MEAT header
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.text("E-MEAT Purchase Report", pageWidth / 2, y, { align: 'center' });
+            
+            // Add date
+            y += 20;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text("Generated on: " + new Date().toLocaleString(), pageWidth / 2, y, { align: 'center' });
+            
+            // Add customer name
+            y += 25;
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text("Customer: " + currentCustomerName, 40, y);
+            
+            // Calculate totals with proper unit handling
+            let kgCount = 0;
+            let gramsCount = 0;
+            let pcsCount = 0;
+            let totalAmount = 0;
+            let hasKg = false;
+            let hasGrams = false;
+            let hasPcs = false;
+            
+            currentCustomerData.forEach(purchase => {
+                const unitLower = purchase.UNIT_OF_MEASURE.toLowerCase();
+                
+                // Handle different unit types
+                if (unitLower === 'kg') {
+                    kgCount += parseInt(purchase.total_quantity);
+                    hasKg = true;
+                } else if (unitLower === 'g' || unitLower === 'grams') {
+                    gramsCount += parseInt(purchase.total_quantity);
+                    hasGrams = true;
+                } else if (unitLower === 'pcs' || unitLower === 'pc' || unitLower === 'piece' || unitLower === 'pieces') {
+                    pcsCount += parseInt(purchase.total_quantity);
+                    hasPcs = true;
+                }
+                
+                totalAmount += parseFloat(purchase.total_amount);
+            });
+            
+            // Create a formatted total quantity string
+            let totalQuantityString = "";
+            if (hasKg) {
+                totalQuantityString += kgCount + " KG";
+            }
+            if ((hasKg && hasGrams) || (hasKg && hasPcs)) {
+                totalQuantityString += " + ";
+            }
+            if (hasGrams) {
+                totalQuantityString += gramsCount + " g";
+            }
+            if ((hasGrams && hasPcs) && (hasKg || hasGrams)) {
+                totalQuantityString += " + ";
+            }
+            if (hasPcs) {
+                totalQuantityString += pcsCount + " pcs";
+            }
+            if (!totalQuantityString) {
+                totalQuantityString = "0"; // Fallback if no quantities
+            }
+            
+            // Prepare data for the table
+            const tableData = [];
+            currentCustomerData.forEach(purchase => {
+                tableData.push([
+                    purchase.meat_category,
+                    purchase.MEAT_PART_NAME.toUpperCase(),
+                    purchase.total_quantity + " " + purchase.UNIT_OF_MEASURE,
+                    "PHP " + parseFloat(purchase.UNIT_PRICE).toFixed(2),
+                    "PHP " + parseFloat(purchase.total_amount).toFixed(2),
+                    new Date(purchase.order_date).toLocaleDateString()
+                ]);
+            });
+            
+            // Add total row with proper units
+            tableData.push([
+                "TOTAL",
+                "",
+                totalQuantityString,
+                "",
+                "PHP " + totalAmount.toFixed(2),
+                ""
+            ]);
+            
+            // Add the table
+            doc.autoTable({
+                startY: y + 10,
+                head: [['Category', 'Meat Part', 'Quantity', 'Unit Price', 'Total Amount', 'Order Date']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { 
+                    fillColor: [220, 53, 69],  // Red color for header
+                    textColor: 255, 
+                    fontStyle: 'bold'
+                },
+                footStyles: { 
+                    fillColor: [240, 240, 240], 
+                    textColor: [0, 0, 0], 
+                    fontStyle: 'bold'
+                },
+                columnStyles: {
+                    0: { cellWidth: 70 },  // Category
+                    1: { cellWidth: 90 },  // Meat Part
+                    2: { cellWidth: 70 },  // Quantity
+                    3: { cellWidth: 70, halign: 'right' },  // Unit Price
+                    4: { cellWidth: 70, halign: 'right' },  // Total Amount
+                    5: { cellWidth: 80 }   // Order Date
+                },
+                margin: { top: 10, right: 40, bottom: 60, left: 40 },
+                didDrawPage: function(data) {
+                    // Footer
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(
+                        "Page " + data.pageNumber, 
+                        pageWidth / 2, 
+                        doc.internal.pageSize.getHeight() - 10, 
+                        { align: 'center' }
+                    );
+                }
+            });
+            
+            // Add note at the bottom
+            const finalY = doc.lastAutoTable.finalY || 150;
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(
+                "This report shows all purchases made by " + currentCustomerName + ". All amounts are in Philippine Peso (PHP).",
+                40, 
+                finalY + 20
+            );
+            
+            // Save the PDF
+            doc.save("E-MEAT_" + currentCustomerName.replace(/\s+/g, '_') + "_Purchases.pdf");
+            
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            alert("There was an error generating the PDF. Please try again.");
+            
+            // Fallback to the window print method if jsPDF fails
+            const printWindow = window.open('', '_blank');
+            
+            // Calculate totals with proper unit handling
+            let kgCount = 0;
+            let gramsCount = 0;
+            let pcsCount = 0;
+            let totalAmount = 0;
+            let hasKg = false;
+            let hasGrams = false;
+            let hasPcs = false;
+            
+            currentCustomerData.forEach(purchase => {
+                const unitLower = purchase.UNIT_OF_MEASURE.toLowerCase();
+                
+                // Handle different unit types
+                if (unitLower === 'kg') {
+                    kgCount += parseInt(purchase.total_quantity);
+                    hasKg = true;
+                } else if (unitLower === 'g' || unitLower === 'grams') {
+                    gramsCount += parseInt(purchase.total_quantity);
+                    hasGrams = true;
+                } else if (unitLower === 'pcs' || unitLower === 'pc' || unitLower === 'piece' || unitLower === 'pieces') {
+                    pcsCount += parseInt(purchase.total_quantity);
+                    hasPcs = true;
+                }
+                
+                totalAmount += parseFloat(purchase.total_amount);
+            });
+            
+            // Create a formatted total quantity string
+            let totalQuantityString = "";
+            if (hasKg) {
+                totalQuantityString += kgCount + " KG";
+            }
+            if ((hasKg && hasGrams) || (hasKg && hasPcs)) {
+                totalQuantityString += " + ";
+            }
+            if (hasGrams) {
+                totalQuantityString += gramsCount + " g";
+            }
+            if ((hasGrams && hasPcs) && (hasKg || hasGrams)) {
+                totalQuantityString += " + ";
+            }
+            if (hasPcs) {
+                totalQuantityString += pcsCount + " pcs";
+            }
+            if (!totalQuantityString) {
+                totalQuantityString = "0"; // Fallback if no quantities
+            }
+            
+            // Create table rows - also updating the fallback to use PHP instead of ₱
+            let purchaseRows = '';
+            currentCustomerData.forEach(purchase => {
+                purchaseRows += `
+                    <tr>
+                        <td>${purchase.meat_category}</td>
+                        <td>${purchase.MEAT_PART_NAME.toUpperCase()}</td>
+                        <td>${purchase.total_quantity} ${purchase.UNIT_OF_MEASURE}</td>
+                        <td class="amount">PHP ${parseFloat(purchase.UNIT_PRICE).toFixed(2)}</td>
+                        <td class="amount">PHP ${parseFloat(purchase.total_amount).toFixed(2)}</td>
+                        <td>${new Date(purchase.order_date).toLocaleDateString()}</td>
+                    </tr>
+                `;
+            });
+            
+            // Create the print content
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Customer Purchase Report - ${currentCustomerName}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 40px; }
+                        h1 { color: #333; margin-bottom: 10px; }
+                        h2 { color: #555; margin-top: 20px; }
+                        .report-date { color: #777; margin-bottom: 30px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+                        th { background-color: #f8f8f8; font-weight: bold; }
+                        .amount { text-align: right; }
+                        .total-row { font-weight: bold; background-color: #f0f0f0; }
+                        .note { font-size: 12px; color: #777; font-style: italic; }
+                    </style>
+                </head>
+                <body>
+                    <h1>E-MEAT Purchase Report</h1>
+                    <p class="report-date">Generated on: ${new Date().toLocaleString()}</p>
+                    
+                    <h2>Customer: ${currentCustomerName}</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Meat Category</th>
+                                <th>Meat Part</th>
+                                <th>Quantity</th>
+                                <th class="amount">Unit Price</th>
+                                <th class="amount">Total Amount</th>
+                                <th>Order Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${purchaseRows}
+                            <tr class="total-row">
+                                <td colspan="2">TOTAL</td>
+                                <td>${totalQuantityString}</td>
+                                <td></td>
+                                <td class="amount">PHP ${totalAmount.toFixed(2)}</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <p class="note">This report shows all purchases made by ${currentCustomerName}. All amounts are in Philippine Peso (PHP).</p>
+                </body>
+                </html>
+            `);
+            
+            // Trigger print when content is loaded
+            printWindow.document.close();
+            printWindow.onload = function() {
+                printWindow.print();
+            };
+        }
     });
     </script>
 </body>

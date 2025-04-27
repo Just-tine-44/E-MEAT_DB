@@ -1,5 +1,16 @@
 <?php
-include('includes/header.php');
+
+session_start(); // Start the session
+
+// To match what login.php is setting:
+if(!isset($_SESSION['username']) || !isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'admin') {
+    $_SESSION['message'] = "You need to log in as admin to access this page";
+    header("Location: ../users/login.php");
+    exit();
+}
+
+// Include the sidebar first
+include('new_include/sidebar.php');
 include '../connection/config.php'; // Database connection
 
 // Fetch total quantity for each category using stored procedure
@@ -95,190 +106,196 @@ if ($conn->multi_query($query)) {
     </style>
 </head>
 <body>
-    <div class="max-w-7xl mx-auto px-4 py-8">
-        <!-- Dashboard Header -->
-        <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
-            <div class="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                <span>E-MEAT</span>
-                <i class="fas fa-chevron-right text-xs"></i>
-                <span>Admin Panel</span>
-            </div>
-        </div>
-
-        <!-- Stock Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <!-- Pork Stock -->
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-blue-100 text-sm mb-1">Pork Stock</p>
-                        <p class="text-3xl font-bold"><?php echo $pork_stock; ?></p>
-                    </div>
-                    <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                        <i class="fas fa-drumstick-bite text-xl"></i>
-                    </div>
+    <!-- Main Content Wrapper - position it to the right of the sidebar -->
+    <div class="pl-0 lg:pl-64 transition-all duration-300"> <!-- Padding for sidebar width -->
+        <!-- Page Content -->
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <!-- Dashboard Header -->
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+                <div class="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                    <span>E-MEAT</span>
+                    <i class="fas fa-chevron-right text-xs"></i>
+                    <span>Admin Panel</span>
                 </div>
-                <a href="#" class="text-xs text-blue-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
-                    View details <i class="fas fa-arrow-right"></i>
-                </a>
             </div>
 
-            <!-- Beef Stock -->
-            <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-yellow-100 text-sm mb-1">Beef Stock</p>
-                        <p class="text-3xl font-bold"><?php echo $beef_stock; ?></p>
-                    </div>
-                    <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                        <i class="fas fa-meat text-xl"></i>
-                    </div>
-                </div>
-                <a href="#" class="text-xs text-yellow-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
-                    View details <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-
-            <!-- Chicken Stock -->
-            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-green-100 text-sm mb-1">Chicken Stock</p>
-                        <p class="text-3xl font-bold"><?php echo $chicken_stock; ?></p>
-                    </div>
-                    <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                        <i class="fas fa-drumstick-bite text-xl"></i>
-                    </div>
-                </div>
-                <a href="#" class="text-xs text-green-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
-                    View details <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-
-            <!-- Total Stock -->
-            <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-red-100 text-sm mb-1">Total Stock</p>
-                        <p class="text-3xl font-bold"><?php echo $total_stock; ?></p>
-                    </div>
-                    <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                        <i class="fas fa-warehouse text-xl"></i>
-                    </div>
-                </div>
-                <a href="#" class="text-xs text-red-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
-                    View details <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-        </div>
-
-        <!-- Sales Overview -->
-        <div class="mb-8">
-            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <i class="fas fa-chart-line text-red-500"></i> Sales Overview
-            </h2>
-            <button id="printSalesBtn" class="px-4 py-2 mb-4 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
-                <i class="fas fa-print"></i> Print Report
-            </button>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- All Time Sales -->
-                <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="text-sm font-medium text-gray-500">Total Sales (All Time)</p>
-                        <div class="bg-blue-100 text-blue-800 p-2 rounded-lg">
-                            <i class="fas fa-calendar"></i>
+            <!-- Stock Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <!-- Pork Stock -->
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-sm mb-1">Pork Stock</p>
+                            <p class="text-3xl font-bold"><?php echo $pork_stock; ?></p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                            <i class="fas fa-drumstick-bite text-xl"></i>
                         </div>
                     </div>
-                    <p class="text-2xl font-bold text-gray-800 flex items-center">
-                        <span class="text-lg mr-1">₱</span>
-                        <?php echo number_format($total_sales_all_time, 2); ?>
-                    </p>
-                    <div class="mt-2 text-xs text-gray-400">Since the beginning</div>
+                    <a href="#" class="text-xs text-blue-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
+                        View details <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
 
-                <!-- Last 24 Hours Sales -->
-                <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="text-sm font-medium text-gray-500">Sales (Last 24 Hours)</p>
-                        <div class="bg-yellow-100 text-yellow-800 p-2 rounded-lg">
-                            <i class="fas fa-clock"></i>
+                <!-- Beef Stock -->
+                <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-yellow-100 text-sm mb-1">Beef Stock</p>
+                            <p class="text-3xl font-bold"><?php echo $beef_stock; ?></p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                            <i class="fas fa-meat text-xl"></i>
                         </div>
                     </div>
-                    <p class="text-2xl font-bold text-gray-800 flex items-center">
-                        <span class="text-lg mr-1">₱</span>
-                        <?php echo number_format($total_sales_last_1_day, 2); ?>
-                    </p>
-                    <div class="mt-2 text-xs text-gray-400">Past 24 hours</div>
+                    <a href="#" class="text-xs text-yellow-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
+                        View details <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
 
-                <!-- This Week's Sales -->
-                <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="text-sm font-medium text-gray-500">This Week's Sales</p>
-                        <div class="bg-purple-100 text-purple-800 p-2 rounded-lg">
-                            <i class="fas fa-calendar-week"></i>
+                <!-- Chicken Stock -->
+                <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-green-100 text-sm mb-1">Chicken Stock</p>
+                            <p class="text-3xl font-bold"><?php echo $chicken_stock; ?></p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                            <i class="fas fa-drumstick-bite text-xl"></i>
                         </div>
                     </div>
-                    <p class="text-2xl font-bold text-gray-800 flex items-center">
-                        <span class="text-lg mr-1">₱</span>
-                        <?php echo number_format($total_sales_this_week, 2); ?>
-                    </p>
-                    <div class="mt-2 text-xs text-gray-400">Current week</div>
+                    <a href="#" class="text-xs text-green-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
+                        View details <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
 
-                <!-- This Month's Sales -->
-                <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="text-sm font-medium text-gray-500">This Month's Sales</p>
-                        <div class="bg-green-100 text-green-800 p-2 rounded-lg">
-                            <i class="fas fa-calendar-alt"></i>
+                <!-- Total Stock -->
+                <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-red-100 text-sm mb-1">Total Stock</p>
+                            <p class="text-3xl font-bold"><?php echo $total_stock; ?></p>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                            <i class="fas fa-warehouse text-xl"></i>
                         </div>
                     </div>
-                    <p class="text-2xl font-bold text-gray-800 flex items-center">
-                        <span class="text-lg mr-1">₱</span>
-                        <?php echo number_format($total_sales_this_month, 2); ?>
-                    </p>
-                    <div class="mt-2 text-xs text-gray-400">Current month</div>
+                    <a href="#" class="text-xs text-red-100 flex items-center gap-1 mt-4 opacity-80 hover:opacity-100 transition">
+                        View details <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
             </div>
-        </div>
 
-        <!-- Purchase Details -->
-        <div class="mb-8">
-            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <!-- Sales Overview -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-line text-red-500"></i> Sales Overview
+                </h2>
+                <button id="printSalesBtn" class="px-4 py-2 mb-4 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- All Time Sales -->
+                    <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-gray-500">Total Sales (All Time)</p>
+                            <div class="bg-blue-100 text-blue-800 p-2 rounded-lg">
+                                <i class="fas fa-calendar"></i>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800 flex items-center">
+                            <span class="text-lg mr-1">₱</span>
+                            <?php echo number_format($total_sales_all_time, 2); ?>
+                        </p>
+                        <div class="mt-2 text-xs text-gray-400">Since the beginning</div>
+                    </div>
+
+                    <!-- Last 24 Hours Sales -->
+                    <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-gray-500">Sales (Last 24 Hours)</p>
+                            <div class="bg-yellow-100 text-yellow-800 p-2 rounded-lg">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800 flex items-center">
+                            <span class="text-lg mr-1">₱</span>
+                            <?php echo number_format($total_sales_last_1_day, 2); ?>
+                        </p>
+                        <div class="mt-2 text-xs text-gray-400">Past 24 hours</div>
+                    </div>
+
+                    <!-- This Week's Sales -->
+                    <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-gray-500">This Week's Sales</p>
+                            <div class="bg-purple-100 text-purple-800 p-2 rounded-lg">
+                                <i class="fas fa-calendar-week"></i>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800 flex items-center">
+                            <span class="text-lg mr-1">₱</span>
+                            <?php echo number_format($total_sales_this_week, 2); ?>
+                        </p>
+                        <div class="mt-2 text-xs text-gray-400">Current week</div>
+                    </div>
+
+                    <!-- This Month's Sales -->
+                    <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-gray-500">This Month's Sales</p>
+                            <div class="bg-green-100 text-green-800 p-2 rounded-lg">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800 flex items-center">
+                            <span class="text-lg mr-1">₱</span>
+                            <?php echo number_format($total_sales_this_month, 2); ?>
+                        </p>
+                        <div class="mt-2 text-xs text-gray-400">Current month</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchase Details -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <i class="fas fa-shopping-cart text-red-500"></i> Purchase Details
-            </h2>
-            <div class="bg-white rounded-xl shadow overflow-hidden border border-gray-100">
+                </h2>
+                <div class="bg-white rounded-xl shadow overflow-hidden border border-gray-100">
                 <div class="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                     <div class="font-medium text-gray-700">Customer Purchases</div>
                     <input type="text" id="customerSearch" placeholder="Search customer..." 
-                           class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                    class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                 </div>
                 <div class="overflow-x-auto">
+                    <div class="max-h-64 overflow-y-auto" style="max-height: calc(4 * 56px);">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Customer Name
-                                </th>
-                            </tr>
+                        <thead class="bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Customer Name
+                            </th>
+                        </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200" id="customerTable">
-                            <?php foreach ($customers as $customer_name => $purchases): ?>
-                                <tr class="hover:bg-gray-50 customer-row">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <a href="#" class="customer-link text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
-                                           data-customer='<?= htmlspecialchars(json_encode($purchases)) ?>' 
-                                           data-customer-name='<?= htmlspecialchars($customer_name) ?>'>
-                                            <i class="fas fa-user"></i>
-                                            <?= htmlspecialchars($customer_name) ?>
-                                        </a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
+                        <?php foreach ($customers as $customer_name => $purchases): ?>
+                            <tr class="hover:bg-gray-50 customer-row">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="#" class="customer-link text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+                                data-customer='<?= htmlspecialchars(json_encode($purchases)) ?>' 
+                                data-customer-name='<?= htmlspecialchars($customer_name) ?>'>
+                                <i class="fas fa-user"></i>
+                                <?= htmlspecialchars($customer_name) ?>
+                                </a>
+                            </td>
+                            </tr>
+                        <?php endforeach; ?>
                         </tbody>
                     </table>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -370,7 +387,7 @@ if ($conn->multi_query($query)) {
                             <td class="px-4 py-3">${purchase.total_quantity} ${purchase.UNIT_OF_MEASURE}</td>
                             <td class="px-4 py-3">₱${parseFloat(purchase.UNIT_PRICE).toFixed(2)}</td>
                             <td class="px-4 py-3 font-medium text-green-600">₱${parseFloat(purchase.total_amount).toFixed(2)}</td>
-                            <td class="px-4 py-3">${new Date(purchase.order_date).toLocaleDateString()}</td>
+                            <td class="px-4 py-3">${new Date(purchase.order_date).toLocaleDateString('en-CA')}</td>
                         </tr>
                     `;
                     tbody.innerHTML += row;
@@ -741,8 +758,3 @@ if ($conn->multi_query($query)) {
     </script>
 </body>
 </html>
-
-<?php
-include('includes/footer.php');
-include('includes/scripts.php');
-?>

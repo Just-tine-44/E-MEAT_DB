@@ -122,9 +122,11 @@ try {
                                             <i class="fas fa-cubes text-gray-400"></i>
                                         </div>
                                         <input type="number" id="qty_available" name="qty_available" 
-                                               value="<?= htmlspecialchars($product['QTY_AVAILABLE']) ?>" 
-                                               class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" 
-                                               required oninput="checkQty()">
+                                            value="<?= htmlspecialchars($product['QTY_AVAILABLE']) ?>"
+                                            min="75" max="400" 
+                                            placeholder="75-400"
+                                            class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" 
+                                            required oninput="checkQty()">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                             <span class="text-gray-500 font-medium">
                                                 <?= htmlspecialchars($product['UNIT_OF_MEASURE']) ?>
@@ -133,9 +135,22 @@ try {
                                     </div>
                                 </div>
                                 <p id="qty-error" class="mt-1 text-sm text-red-600 hidden">
-                                    Quantity must be greater than 0.
+                                    Quantity must be between 75 and 400.
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                
+                                <!-- Range Indicator -->
+                                <div class="mt-2">
+                                    <div class="flex justify-between text-xs text-gray-500">
+                                        <span>Min: 75</span>
+                                        <span>Max: 400</span>
+                                    </div>
+                                    <div class="h-2 bg-gray-200 rounded mt-1 overflow-hidden">
+                                        <div id="qty-range-indicator" class="h-full bg-green-500 transition-all duration-300" 
+                                            style="width: <?= min(100, max(0, (($product['QTY_AVAILABLE'] - 75) / (400 - 75)) * 100)) ?>%"></div>
+                                    </div>
+                                </div>
+                                
+                                <p class="text-xs text-gray-500 mt-1">
                                     Current inventory level that customers can purchase
                                 </p>
                             </div>
@@ -151,9 +166,11 @@ try {
                                             <span class="text-gray-500 font-medium">₱</span>
                                         </div>
                                         <input type="number" step="0.01" id="unit_price" name="unit_price" 
-                                               value="<?= htmlspecialchars($product['UNIT_PRICE']) ?>" 
-                                               class="block w-full pl-8 pr-20 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" 
-                                               required oninput="checkPrice()">
+                                            value="<?= htmlspecialchars($product['UNIT_PRICE']) ?>"
+                                            min="50" max="1000"
+                                            placeholder="50-1000"
+                                            class="block w-full pl-8 pr-20 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" 
+                                            required oninput="checkPrice()">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                             <span class="text-gray-500 font-medium">
                                                 per <?= htmlspecialchars($product['UNIT_OF_MEASURE']) ?>
@@ -162,9 +179,22 @@ try {
                                     </div>
                                 </div>
                                 <p id="price-error" class="mt-1 text-sm text-red-600 hidden">
-                                    Price must be greater than 0.
+                                    Price must be between ₱50 and ₱1000.
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                
+                                <!-- Price Range Indicator -->
+                                <div class="mt-2">
+                                    <div class="flex justify-between text-xs text-gray-500">
+                                        <span>Min: ₱50</span>
+                                        <span>Max: ₱1000</span>
+                                    </div>
+                                    <div class="h-2 bg-gray-200 rounded mt-1 overflow-hidden">
+                                        <div id="price-range-indicator" class="h-full bg-blue-500 transition-all duration-300" 
+                                            style="width: <?= min(100, max(0, (($product['UNIT_PRICE'] - 50) / (1000 - 50)) * 100)) ?>%"></div>
+                                    </div>
+                                </div>
+                                
+                                <p class="text-xs text-gray-500 mt-1">
                                     Sales price per unit shown to customers
                                 </p>
                             </div>
@@ -273,14 +303,48 @@ try {
         }
         
         function checkPrice() {
-            const price = document.getElementById('unit_price').value;
+            const price = parseFloat(document.getElementById('unit_price').value);
             const error = document.getElementById('price-error');
+            const input = document.getElementById('unit_price');
+            const minPrice = 50; // Suggested minimum price (adjust as needed)
+            const maxPrice = 1000; // Suggested maximum price (adjust as needed)
             
-            if (price <= 0 || price === '' || price === '-0') {
+            if (isNaN(price) || price < minPrice || price > maxPrice) {
+                error.textContent = `Price must be between ₱${minPrice} and ₱${maxPrice}.`;
                 error.classList.remove('hidden');
+                input.classList.add('border-red-500');
+                
+                // Update indicator if it exists
+                const indicator = document.getElementById('price-range-indicator');
+                if (indicator) {
+                    indicator.style.width = '0%';
+                    indicator.style.backgroundColor = '#ef4444'; // red
+                }
+                
                 return false;
             } else {
                 error.classList.add('hidden');
+                input.classList.remove('border-red-500');
+                
+                // Format to 2 decimal places
+                input.value = price.toFixed(2);
+                
+                // Update indicator if it exists
+                const indicator = document.getElementById('price-range-indicator');
+                if (indicator) {
+                    const percentage = ((price - minPrice) / (maxPrice - minPrice)) * 100;
+                    indicator.style.width = Math.min(100, Math.max(0, percentage)) + '%';
+                    
+                    // Change color based on price point
+                    if (percentage < 25) {
+                        indicator.style.backgroundColor = '#22c55e'; // green for lower prices
+                    } else if (percentage > 75) {
+                        indicator.style.backgroundColor = '#f97316'; // orange for higher prices
+                    } else {
+                        indicator.style.backgroundColor = '#3b82f6'; // blue for mid-range
+                    }
+                }
+                
                 return true;
             }
         }
@@ -290,6 +354,51 @@ try {
             const priceValid = checkPrice();
             return qtyValid && priceValid;
         }
+
+        function checkQty() {
+            const qty = parseInt(document.getElementById('qty_available').value);
+            const error = document.getElementById('qty-error');
+            const input = document.getElementById('qty_available');
+            const indicator = document.getElementById('qty-range-indicator');
+            
+            if (isNaN(qty) || qty < 75 || qty > 400) {
+                error.classList.remove('hidden');
+                input.classList.add('border-red-500');
+                
+                // Update indicator
+                if (indicator) {
+                    indicator.style.width = '0%';
+                    indicator.style.backgroundColor = '#ef4444'; // red
+                }
+                
+                return false;
+            } else {
+                error.classList.add('hidden');
+                input.classList.remove('border-red-500');
+                
+                // Update indicator
+                if (indicator) {
+                    const percentage = ((qty - 75) / (400 - 75)) * 100;
+                    indicator.style.width = percentage + '%';
+                    
+                    // Change color based on value
+                    if (percentage < 25) {
+                        indicator.style.backgroundColor = '#eab308'; // yellow
+                    } else if (percentage > 75) {
+                        indicator.style.backgroundColor = '#f97316'; // orange
+                    } else {
+                        indicator.style.backgroundColor = '#22c55e'; // green
+                    }
+                }
+                
+                return true;
+            }
+        }
+
+        // Initialize range indicator on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkQty();
+        });
     </script>
 </body>
 </html>

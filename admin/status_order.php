@@ -1,9 +1,16 @@
 <?php
-$page_title = "Order Management | E-MEAT Admin";
-// session_start();
+session_start(); // Start the session
 
-include('includes/header.php');
-include '../connection/config.php'; // Database connection
+// To match what login.php is setting:
+if(!isset($_SESSION['username']) || !isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'admin') {
+    $_SESSION['message'] = "You need to log in as admin to access this page";
+    header("Location: ../users/login.php");
+    exit();
+}
+
+$page_title = "Order Management | E-MEAT Admin";
+include('new_include/sidebar.php');
+include '../connection/config.php';
 
 // Enable error reporting
 ini_set('display_errors', 1);
@@ -14,10 +21,21 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
     die("Access Denied. Only admins can access this page.");
 }
 
-// Handle status update
+// Flash message handling
 $successMessage = "";
 $errorMessage = "";
 
+if (isset($_SESSION['success_message'])) {
+    $successMessage = $_SESSION['success_message'];
+    unset($_SESSION['success_message']); // Clear the message after displaying it once
+}
+
+if (isset($_SESSION['error_message'])) {
+    $errorMessage = $_SESSION['error_message'];
+    unset($_SESSION['error_message']); // Clear the message after displaying it once
+}
+
+// Handle status update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
     $new_status = isset($_POST['status']) ? intval($_POST['status']) : 0;
@@ -36,14 +54,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $stmt->bind_param("iiis", $order_id, $new_status, $user_id, $user_type);
 
     if ($stmt->execute()) {
-        $successMessage = "Order status updated successfully.";
+        $_SESSION['success_message'] = "Order status updated successfully."; // Store in session
+        // Instead of header redirect, use JavaScript
+        echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
+        exit;
     } else {
-        $errorMessage = "Error updating status: " . $stmt->error;
+        $_SESSION['error_message'] = "Error updating status: " . $stmt->error; // Store in session
+        // Instead of header redirect, use JavaScript
+        echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
+        exit;
     }
     $stmt->close();
 }
 
-// ADD RIDER ASSIGNMENT HANDLER HERE
+// Rider assignment handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_rider'])) {
     $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
     $rider_id = isset($_POST['rider_id']) ? intval($_POST['rider_id']) : 0;
@@ -61,13 +85,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_rider'])) {
         $rider_stmt->bind_param("ii", $rider_id, $order_id);
 
         if ($rider_stmt->execute()) {
-            $successMessage = "Rider assigned successfully.";
+            $_SESSION['success_message'] = "Rider assigned successfully."; // Store in session
+            // Instead of header redirect, use JavaScript
+            echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
+            exit;
         } else {
-            $errorMessage = "Error assigning rider: " . $rider_stmt->error;
+            $_SESSION['error_message'] = "Error assigning rider: " . $rider_stmt->error; // Store in session
+            // Instead of header redirect, use JavaScript
+            echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
+            exit;
         }
         $rider_stmt->close();
     } else {
-        $errorMessage = "Invalid order or rider selection.";
+        $_SESSION['error_message'] = "Invalid order or rider selection."; // Store in session
+        // Instead of header redirect, use JavaScript
+        echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
+        exit;
     }
 }
 
@@ -106,9 +139,9 @@ $conn->next_result(); // Move to the next result set, if any
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Management</title>
+    <title><?= $page_title ?></title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SweetAlert2 -->
@@ -116,26 +149,27 @@ $conn->next_result(); // Move to the next result set, if any
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: #f9fafb;
         }
         
         /* Custom scrollbar for tables */
         .scrollbar-thin::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
         }
         
         .scrollbar-thin::-webkit-scrollbar-track {
             background: #f1f1f1;
+            border-radius: 10px;
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb {
             background: #cbd5e0;
-            border-radius: 20px;
+            border-radius: 10px;
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
@@ -145,245 +179,624 @@ $conn->next_result(); // Move to the next result set, if any
         /* Status badge styling */
         .status-badge {
             min-width: 100px;
-            display: inline-block;
-            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            padding: 0.375rem 0.625rem;
+        }
+        
+        /* Timeline styling */
+        .timeline-track {
+            height: 2px;
+            background: #e5e7eb;
+            position: relative;
+        }
+        
+        .timeline-progress {
+            height: 100%;
+            background: #10b981;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid white;
+        }
+        
+        .timeline-dot.completed {
+            background: #10b981;
+        }
+        
+        .timeline-dot.current {
+            background: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        
+        .timeline-dot.pending {
+            background: #e5e7eb;
+        }
+        
+        /* Switch toggle styling */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        
+        /* Card hover effect */
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Animation for row hover */
+        tr.order-row {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        tr.order-row:hover td {
+            background-color: #f3f4f6;
+        }
+        
+        /* Disable rider selection when already assigned */
+        select:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            background-color: #f3f4f6;
+        }
+        
+        .rider-assigned {
+            transition: all 0.2s ease;
+        }
+        
+        /* Make modal appear with animation */
+        .modal {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+        
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        /* Animation for rider form */
+        .rider-form {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .fadeIn {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .table-fixed-height {
+            max-height: 570px; /* Adjust this value based on your row height */
+            overflow-y: auto;
         }
     </style>
 </head>
-<body>
-    <div class="max-w-7xl mx-auto px-4 py-8">
-        <!-- SweetAlert2 Notifications -->
-        <script>
-        <?php if ($successMessage): ?>
-            Swal.fire({
-                title: "Success!",
-                text: "<?= $successMessage ?>",
-                icon: "success",
-                position: 'top-end',
-                toast: true,
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-                background: '#10b981',
-                color: '#ffffff'
-            });
-        <?php endif; ?>
+<body class="text-gray-800">
+    <!-- Main Content Wrapper - position it to the right of the sidebar -->
+    <div class="pl-0 lg:pl-64 transition-all duration-300">
+        <!-- Page Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <!-- SweetAlert2 Notifications -->
+            <script>
+            <?php if ($successMessage): ?>
+                Swal.fire({
+                    title: "Success!",
+                    text: "<?= $successMessage ?>",
+                    icon: "success",
+                    position: 'top-end',
+                    toast: true,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    background: '#10b981',
+                    color: '#ffffff'
+                });
+            <?php endif; ?>
 
-        <?php if ($errorMessage): ?>
-            Swal.fire({
-                title: "Error!",
-                text: "<?= $errorMessage ?>",
-                icon: "error",
-                position: 'top-end',
-                toast: true,
-                showConfirmButton: false,
-                timer: 4000,
-                timerProgressBar: true,
-                background: '#ef4444',
-                color: '#ffffff'
-            });
-        <?php endif; ?>
-        </script>
-        
-        <!-- Dashboard Header with Search -->
-        <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Order Management</h1>
-                <p class="text-gray-500 mt-1">Manage and update customer orders status</p>
-            </div>
+            <?php if ($errorMessage): ?>
+                Swal.fire({
+                    title: "Error!",
+                    text: "<?= $errorMessage ?>",
+                    icon: "error",
+                    position: 'top-end',
+                    toast: true,
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true,
+                    background: '#ef4444',
+                    color: '#ffffff'
+                });
+            <?php endif; ?>
+            </script>
             
-            <!-- Search positioned at top right -->
-            <div class="relative w-full md:w-64">
-                <input type="text" id="orderSearch" placeholder="Search by customer name..." 
-                    class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none bg-white">
-                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <i class="fas fa-search"></i>
+            <!-- Dashboard Header -->
+            <div class="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-bold text-gray-900">Order Management</h1>
+                        <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center">
+                            <span class="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                            Live
+                        </span>
+                    </div>
+                    <p class="text-gray-600 mt-1 text-sm">View and manage customer orders</p>
+                </div>
+                
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <!-- Search box -->
+                    <div class="relative flex-1 md:w-64">
+                        <input type="text" id="orderSearch" placeholder="Search customer..." 
+                            class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none bg-white shadow-sm">
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter dropdown -->
+                    <div class="relative">
+                        <button id="filterBtn" class="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 shadow-sm">
+                            <i class="fas fa-filter text-gray-400"></i>
+                            <span>Filter</span>
+                        </button>
+                        <div id="filterDropdown" class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg z-10 hidden border border-gray-200">
+                            <div class="p-2 border-b border-gray-100">
+                                <p class="text-xs font-semibold text-gray-500 uppercase">Order Status</p>
+                            </div>
+                            <div class="p-2 space-y-1">
+                                <button class="status-filter active w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100"
+                                        data-status="all">
+                                    <span class="flex items-center">
+                                        <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
+                                        All Orders
+                                    </span>
+                                </button>
+                                <?php foreach ($status_options as $stat_id => $status_name): ?>
+                                    <button class="status-filter w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100"
+                                            data-status="<?= $stat_id ?>">
+                                        <span class="flex items-center">
+                                            <span class="w-2 h-2 rounded-full 
+                                            <?php 
+                                                if ($stat_id == 1) echo 'bg-yellow-500';      // Pending
+                                                else if ($stat_id == 2) echo 'bg-blue-500';   // Processing
+                                                else if ($stat_id == 3) echo 'bg-indigo-500'; // In Transit
+                                                else if ($stat_id == 4) echo 'bg-green-500';  // Delivered
+                                                else if ($stat_id == 5) echo 'bg-emerald-500';  // Received
+                                                else echo 'bg-gray-500';                      // Any other status
+                                            ?> mr-2"></span>
+                                            <?= $status_name ?>
+                                        </span>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Status Filter Tabs -->
-        <div class="mb-6">
-            <div class="flex flex-wrap gap-2">
-                <button class="status-filter active px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all"
-                        data-status="all">
-                    All Orders
-                </button>
-                <?php foreach ($status_options as $stat_id => $status_name): ?>
-                    <button class="status-filter px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all"
-                            data-status="<?= $stat_id ?>">
-                        <?= $status_name ?>
-                    </button>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        
-        <!-- Orders Table -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-            <div class="overflow-x-auto scrollbar-thin">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr class="bg-gray-50">
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Customer
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Amount
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Order Date
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Modified By
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Last Update
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Assigned Rider
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <?php if ($result && $result->num_rows > 0): ?>
-                            <?php while ($row = $result->fetch_assoc()): ?>
-                                <tr class="hover:bg-gray-50 transition-all order-row" data-status="<?= $row['STAT_ID'] ?>">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-800">
-                                                <?= strtoupper(substr($row['USER_FNAME'], 0, 1) . substr($row['USER_LNAME'], 0, 1)) ?>
-                                            </div>
-                                            <div class="ml-3">
-                                                <div class="text-sm font-medium text-gray-900"><?= htmlspecialchars($row['USER_FNAME'] . " " . $row['USER_LNAME']) ?></div>
-                                            </div>
+            
+            <!-- Order Status Cards (Mobile View) -->
+            <div class="grid grid-cols-1 gap-4 mb-6 md:hidden">
+                <?php if ($result && $result->num_rows > 0): ?>
+                    <?php $result->data_seek(0); // Reset pointer ?>
+                    <?php while ($row = $result->fetch_assoc()): ?>
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden order-row order-card transition-all duration-200" 
+                             data-status="<?= $row['STAT_ID'] ?>">
+                             
+                            <div class="p-4 border-b border-gray-100">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-800 font-medium">
+                                            <?= strtoupper(substr($row['USER_FNAME'], 0, 1) . substr($row['USER_LNAME'], 0, 1)) ?>
                                         </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-green-600">₱<?= number_format($row['TOTAL_AMOUNT'], 2) ?></div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-700">
+                                        <div>
+                                            <h3 class="font-medium text-gray-900"><?= htmlspecialchars($row['USER_FNAME'] . " " . $row['USER_LNAME']) ?></h3>
+                                            <div class="text-xs text-gray-500">Order #<?= $row['ORDERS_ID'] ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-semibold text-green-600">₱<?= number_format($row['TOTAL_AMOUNT'], 2) ?></div>
+                                        <div class="text-xs text-gray-500">
                                             <?php 
                                                 $date = new DateTime($row['ORDERS_DATE']); 
                                                 echo $date->format('M d, Y'); 
                                             ?>
                                         </div>
-                                        <div class="text-xs text-gray-500"><?= $date->format('h:i A'); ?></div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?php
-                                            // Determine badge color based on status
-                                            $badgeClass = 'bg-blue-100 text-blue-800'; // Default
-                                            if ($row['STAT_ID'] == 1) { // Pending
-                                                $badgeClass = 'bg-yellow-100 text-yellow-800';
-                                            } else if ($row['STAT_ID'] == 2) { // Processing
-                                                $badgeClass = 'bg-blue-100 text-blue-800';
-                                            } else if ($row['STAT_ID'] == 3) { // Shipped
-                                                $badgeClass = 'bg-indigo-100 text-indigo-800';
-                                            } else if ($row['STAT_ID'] == 4) { // Delivered
-                                                $badgeClass = 'bg-green-100 text-green-800';
-                                            } else if ($row['STAT_ID'] == 5) { // Cancelled
-                                                $badgeClass = 'bg-red-100 text-red-800';
-                                            }
-                                        ?>
-                                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full status-badge <?= $badgeClass ?>">
-                                            <?= htmlspecialchars($row['STATUS_NAME']) ?>
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?php if ($row['MODIFIED_BY']): ?>
-                                            <div class="text-sm text-gray-900"><?= htmlspecialchars($row['ADMIN_FNAME'] . " " . $row['ADMIN_LNAME']) ?></div>
-                                            <div class="text-xs text-gray-500">Admin</div>
-                                        <?php else: ?>
-                                            <span class="text-xs text-gray-500">Not updated yet</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?php if ($row['LAST_UPDATE']): ?>
-                                            <div class="text-sm text-gray-700">
-                                                <?php 
-                                                    $updateDate = new DateTime($row['LAST_UPDATE']); 
-                                                    echo $updateDate->format('M d, Y'); 
-                                                ?>
-                                            </div>
-                                            <div class="text-xs text-gray-500"><?= $updateDate->format('h:i A'); ?></div>
-                                        <?php else: ?>
-                                            <span class="text-xs text-gray-500">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?php if (!empty($row['rider_name'])): ?>
-                                            <div class="text-sm text-gray-900"><?= htmlspecialchars($row['rider_name']) ?></div>
-                                            <div class="text-xs text-gray-500"><?= htmlspecialchars($row['rider_contact']) ?></div>
-                                        <?php else: ?>
-                                            <span class="text-xs text-gray-500">No rider assigned</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4">
+                                <!-- Status Badge -->
+                                <?php
+                                    $badgeClass = 'bg-blue-100 text-blue-800'; // Default
+                                    $badgeIcon = 'fa-spinner';
+                                    if ($row['STAT_ID'] == 1) { // Pending
+                                        $badgeClass = 'bg-yellow-100 text-yellow-800';
+                                        $badgeIcon = 'fa-clock';
+                                    } else if ($row['STAT_ID'] == 2) { // Processing
+                                        $badgeClass = 'bg-blue-100 text-blue-800';
+                                        $badgeIcon = 'fa-cog';
+                                    } else if ($row['STAT_ID'] == 3) { // In Transit
+                                        $badgeClass = 'bg-indigo-100 text-indigo-800';
+                                        $badgeIcon = 'fa-truck-fast';
+                                    } else if ($row['STAT_ID'] == 4) { // Delivered
+                                        $badgeClass = 'bg-green-100 text-green-800';
+                                        $badgeIcon = 'fa-check';
+                                    } else if ($row['STAT_ID'] == 5) { // Received
+                                        $badgeClass = 'bg-emerald-100 text-emerald-800'; // Changed to emerald for Received
+                                        $badgeIcon = 'fa-circle-check'; // Changed icon to circle-check
+                                    }
+                                ?>
+                                <span class="px-3 py-1.5 inline-flex text-xs leading-5 font-medium rounded-full <?= $badgeClass ?>">
+                                    <i class="fas <?= $badgeIcon ?> mr-1.5"></i>
+                                    <?= htmlspecialchars($row['STATUS_NAME']) ?>
+                                </span>
+                                
+                                <!-- Order Timeline (simple version for mobile) -->
+                                <div class="my-4 relative">
+                                    <div class="timeline-track">
+                                        <div class="timeline-progress" style="width: <?= min(100, ($row['STAT_ID'] / 4) * 100) ?>%;"></div>
+                                        
+                                        <?php for($i = 1; $i <= 4; $i++): ?>
+                                            <?php 
+                                                $dotClass = 'timeline-dot ';
+                                                $dotClass .= $row['STAT_ID'] > $i ? 'completed' : 
+                                                           ($row['STAT_ID'] == $i ? 'current' : 'pending');
+                                            ?>
+                                            <div class="<?= $dotClass ?>" style="left: <?= (($i-1) / 3) * 100 ?>%;"></div>
+                                        <?php endfor; ?>
+                                    </div>
+                                </div>
+                                
+                                <!-- Collapsible Status Update Form -->
+                                <div class="mt-4 border-t border-gray-100 pt-4">
+                                    <div class="flex flex-col gap-3">
                                         <form method="post" class="status-form">
                                             <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
-                                            <div class="flex items-center justify-center space-x-2">
-                                                <select name="status" class="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-red-500 focus:outline-none">
+                                            <div class="flex gap-2">
+                                                <select name="status" class="status-select text-sm border border-gray-300 rounded-lg px-3 py-2 flex-1 focus:ring-2 focus:ring-red-500 focus:outline-none" data-original-status="<?= $row['STAT_ID'] ?>">
                                                     <?php foreach ($status_options as $stat_id => $status_name): ?>
                                                         <option value="<?= $stat_id ?>" <?= ($row['STAT_ID'] == $stat_id) ? 'selected' : '' ?>>
                                                             <?= $status_name ?>
                                                         </option>
                                                     <?php endforeach; ?>
                                                 </select>
-                                                <button type="submit" name="update_status" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg transition-colors">
-                                                    Update
+                                                <button type="submit" name="update_status" class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                    <i class="fas fa-save"></i> Update
                                                 </button>
                                             </div>
                                         </form>
+                                        
+                                        <!-- Rider Assignment (hidden when pending, disabled when assigned) -->
+                                        <?php if (empty($row['rider_name'])): ?>
+                                            <form method="post" class="rider-form mt-2" <?= $row['STAT_ID'] == 1 ? 'style="display:none;"' : '' ?>>
+                                                <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
+                                                <div class="flex gap-2">
+                                                    <select name="rider_id" class="text-sm border border-gray-300 rounded-lg px-3 py-2 flex-1 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                        <option value="">Select Rider</option>
+                                                        <?php if($riders): $riders->data_seek(0); ?>
+                                                            <?php while ($rider = $riders->fetch_assoc()): ?>
+                                                                <option value="<?= $rider['rider_id'] ?>" <?= (isset($row['RIDER_ID']) && $row['RIDER_ID'] == $rider['rider_id']) ? 'selected' : '' ?>>
+                                                                    <?= htmlspecialchars($rider['rider_name']) ?>
+                                                                </option>
+                                                            <?php endwhile; ?>
+                                                        <?php endif; ?>
+                                                    </select>
+                                                    <button type="submit" name="assign_rider" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                        <i class="fas fa-motorcycle"></i> Assign
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        <?php else: ?>
+                                            <div class="rider-assigned flex items-center mt-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+                                                <div class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+                                                    <i class="fas fa-motorcycle"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-sm"><?= htmlspecialchars($row['rider_name']) ?></p>
+                                                    <p class="text-xs text-gray-500"><?= htmlspecialchars($row['rider_contact']) ?></p>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+                        <div class="flex flex-col items-center justify-center">
+                            <i class="fas fa-box text-gray-200 text-6xl mb-4"></i>
+                            <h3 class="text-gray-600 font-medium mb-1">No Orders Found</h3>
+                            <p class="text-gray-400 text-sm">New orders will appear here once customers place them</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
 
-                                        <!-- Add Rider assignment form -->
-                                        <form method="post" class="rider-form mt-2 md:mt-0">
-                                            <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
-                                            <div class="flex items-center justify-center space-x-2">
-                                                <select name="rider_id" class="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                                                    <option value="">Select Rider</option>
-                                                    <?php if($riders): $riders->data_seek(0); ?>
-                                                        <?php while ($rider = $riders->fetch_assoc()): ?>
-                                                            <option value="<?= $rider['rider_id'] ?>" <?= (isset($row['RIDER_ID']) && $row['RIDER_ID'] == $rider['rider_id']) ? 'selected' : '' ?>>
-                                                                <?= htmlspecialchars($rider['rider_name']) ?>
-                                                            </option>
-                                                        <?php endwhile; ?>
-                                                    <?php endif; ?>
-                                                </select>
-                                                <button type="submit" name="assign_rider" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded-lg transition-colors">
-                                                    Assign
-                                                </button>
+            <!-- Orders Table (Desktop View) -->
+            <div class="hidden md:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto scrollbar-thin table-fixed-height">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th scope="col" class="px-6 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Customer
+                                </th>
+                                <th scope="col" class="px-6 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount
+                                </th>
+                                <th scope="col" class="px-6 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Order Date
+                                </th>
+                                <th scope="col" class="px-6 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th scope="col" class="px-6 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Last Update
+                                </th>
+                                <th scope="col" class="px-6 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Rider
+                                </th>
+                                <th scope="col" class="px-6 py-3.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <?php if ($result && $result->num_rows > 0): ?>
+                                <?php $result->data_seek(0); // Reset pointer to beginning ?>
+                                <?php while ($row = $result->fetch_assoc()): ?>
+                                    <tr class="hover:bg-gray-50 transition-all order-row" data-status="<?= $row['STAT_ID'] ?>">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-800 font-medium">
+                                                    <?= strtoupper(substr($row['USER_FNAME'], 0, 1) . substr($row['USER_LNAME'], 0, 1)) ?>
+                                                </div>
+                                                <div class="ml-3">
+                                                    <div class="text-sm font-medium text-gray-900"><?= htmlspecialchars($row['USER_FNAME'] . " " . $row['USER_LNAME']) ?></div>
+                                                    <div class="text-xs text-gray-500">Order #<?= $row['ORDERS_ID'] ?></div>
+                                                </div>
                                             </div>
-                                        </form>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm font-medium text-green-600">₱<?= number_format($row['TOTAL_AMOUNT'], 2) ?></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm text-gray-700">
+                                                <?php 
+                                                    $date = new DateTime($row['ORDERS_DATE']); 
+                                                    echo $date->format('M d, Y'); 
+                                                ?>
+                                            </div>
+                                            <div class="text-xs text-gray-500"><?= $date->format('h:i A'); ?></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <?php
+                                                $badgeClass = 'bg-blue-100 text-blue-800'; // Default
+                                                $badgeIcon = 'fa-spinner';
+                                                if ($row['STAT_ID'] == 1) { // Pending
+                                                    $badgeClass = 'bg-yellow-100 text-yellow-800';
+                                                    $badgeIcon = 'fa-clock';
+                                                } else if ($row['STAT_ID'] == 2) { // Processing
+                                                    $badgeClass = 'bg-blue-100 text-blue-800';
+                                                    $badgeIcon = 'fa-cog';
+                                                } else if ($row['STAT_ID'] == 3) { // In Transit
+                                                    $badgeClass = 'bg-indigo-100 text-indigo-800';
+                                                    $badgeIcon = 'fa-truck-fast';
+                                                } else if ($row['STAT_ID'] == 4) { // Delivered
+                                                    $badgeClass = 'bg-green-100 text-green-800';
+                                                    $badgeIcon = 'fa-check';
+                                                } else if ($row['STAT_ID'] == 5) { // Received (changed from Cancelled)
+                                                    $badgeClass = 'bg-emerald-100 text-emerald-800'; // Changed to emerald for Received
+                                                    $badgeIcon = 'fa-circle-check'; // Changed icon to circle-check
+                                                }
+                                            ?>
+                                            <div class="mb-2">
+                                                <span class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full <?= $badgeClass ?>">
+                                                    <i class="fas <?= $badgeIcon ?> mr-1.5"></i>
+                                                    <?= htmlspecialchars($row['STATUS_NAME']) ?>
+                                                </span>
+                                            </div>
+                                            
+                                            <!-- Order Timeline -->
+                                            <div class="mt-3 relative">
+                                                <div class="timeline-track">
+                                                    <div class="timeline-progress" style="width: <?= min(100, ($row['STAT_ID'] / 4) * 100) ?>%;"></div>
+                                                    
+                                                    <?php for($i = 1; $i <= 4; $i++): ?>
+                                                        <?php 
+                                                            $dotClass = 'timeline-dot ';
+                                                            $dotClass .= $row['STAT_ID'] > $i ? 'completed' : 
+                                                                      ($row['STAT_ID'] == $i ? 'current' : 'pending');
+                                                        ?>
+                                                        <div class="<?= $dotClass ?>" style="left: <?= (($i-1) / 3) * 100 ?>%;"></div>
+                                                    <?php endfor; ?>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <?php if ($row['LAST_UPDATE']): ?>
+                                                <div class="text-sm text-gray-700">
+                                                    <?php 
+                                                        $updateDate = new DateTime($row['LAST_UPDATE']); 
+                                                        echo $updateDate->format('M d, Y'); 
+                                                    ?>
+                                                </div>
+                                                <div class="text-xs text-gray-500"><?= $updateDate->format('h:i A'); ?></div>
+                                            <?php else: ?>
+                                                <span class="text-xs text-gray-400 italic">Not updated</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <?php if (!empty($row['rider_name'])): ?>
+                                                <div class="rider-assigned flex items-center">
+                                                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-2">
+                                                        <i class="fas fa-motorcycle"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-sm font-medium"><?= htmlspecialchars($row['rider_name']) ?></div>
+                                                        <div class="text-xs text-gray-500"><?= htmlspecialchars($row['rider_contact']) ?></div>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <span class="text-xs text-gray-500 flex items-center gap-1">
+                                                    <i class="fas fa-circle-exclamation"></i> No rider assigned
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex flex-col gap-2">
+                                                <!-- Status Update Form -->
+                                                <form method="post" class="status-form">
+                                                    <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
+                                                    <div class="flex items-center space-x-2">
+                                                        <select name="status" class="status-select text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-red-500 focus:outline-none flex-grow" data-original-status="<?= $row['STAT_ID'] ?>">
+                                                            <?php foreach ($status_options as $stat_id => $status_name): ?>
+                                                                <option value="<?= $stat_id ?>" <?= ($row['STAT_ID'] == $stat_id) ? 'selected' : '' ?>>
+                                                                    <?= $status_name ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <button type="submit" name="update_status" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                                                            Update
+                                                        </button>
+                                                    </div>
+                                                </form>
+
+                                                <!-- Rider Assignment Form (hidden when pending, disabled when assigned) -->
+                                                <?php if (empty($row['rider_name'])): ?>
+                                                    <form method="post" class="rider-form" <?= $row['STAT_ID'] == 1 ? 'style="display:none;"' : '' ?>>
+                                                        <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
+                                                        <div class="flex items-center space-x-2">
+                                                            <select name="rider_id" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none flex-grow">
+                                                                <option value="">Select Rider</option>
+                                                                <?php if($riders): $riders->data_seek(0); ?>
+                                                                    <?php while ($rider = $riders->fetch_assoc()): ?>
+                                                                        <option value="<?= $rider['rider_id'] ?>" <?= (isset($row['RIDER_ID']) && $row['RIDER_ID'] == $rider['rider_id']) ? 'selected' : '' ?>>
+                                                                            <?= htmlspecialchars($rider['rider_name']) ?>
+                                                                        </option>
+                                                                    <?php endwhile; ?>
+                                                                <?php endif; ?>
+                                                            </select>
+                                                            <button type="submit" name="assign_rider" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                                                                Assign
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <div class="rider-assigned flex items-center mt-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                                                        <div class="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-1.5">
+                                                            <i class="fas fa-motorcycle text-xs"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-xs font-medium"><?= htmlspecialchars($row['rider_name']) ?></div>
+                                                            <div class="text-xs text-gray-500"><?= htmlspecialchars($row['rider_contact']) ?></div>
+                                                        </div>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7" class="px-6 py-12 text-center">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <i class="fas fa-box text-gray-200 text-6xl mb-4"></i>
+                                            <h3 class="text-gray-600 font-medium mb-1">No Orders Found</h3>
+                                            <p class="text-gray-400 text-sm">New orders will appear here once customers place them</p>
+                                        </div>
                                     </td>
                                 </tr>
-                            <?php endwhile; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="7" class="px-6 py-8 text-center">
-                                    <div class="flex flex-col items-center justify-center">
-                                        <i class="fas fa-shopping-cart text-gray-300 text-5xl mb-4"></i>
-                                        <p class="text-gray-500 mb-2">No orders found</p>
-                                        <p class="text-sm text-gray-400">New orders will appear here once customers place them</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
     
     <script>
         $(document).ready(function() {
-            // Search functionality
+            // Initially hide rider assignment for pending orders
+            $('.order-row').each(function() {
+                var statusId = $(this).data('status');
+                if (statusId == 1) { // If status is "Pending"
+                    $(this).find('.rider-form').hide();
+                }
+            });
+            
+            // Show rider assignment when status changes from pending
+            $('.status-select').on('change', function() {
+                var currentStatusId = $(this).val();
+                var originalStatusId = $(this).data('original-status');
+                var orderRow = $(this).closest('.order-row');
+                
+                // If changing from "Pending" (1) to something else
+                if (originalStatusId == 1 && currentStatusId != 1) {
+                    // Show the rider assignment form with a nice animation
+                    orderRow.find('.rider-form').fadeIn(300).addClass('fadeIn');
+                    
+                    // Show a notification
+                    Swal.fire({
+                        title: "Ready for Rider Assignment",
+                        text: "Now you can assign a rider to this order",
+                        icon: "info",
+                        position: 'top-end',
+                        toast: true,
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                } 
+                // If changing back to pending, hide the rider assignment
+                else if (currentStatusId == 1) {
+                    orderRow.find('.rider-form').fadeOut(200);
+                }
+            });
+            
+            // Toggle filter dropdown
+            $('#filterBtn').on('click', function(e) {
+                e.stopPropagation();
+                $('#filterDropdown').toggleClass('hidden');
+            });
+            
+            // Hide filter dropdown when clicking elsewhere
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#filterBtn').length && !$(e.target).closest('#filterDropdown').length) {
+                    $('#filterDropdown').addClass('hidden');
+                }
+            });
+            
             // Search functionality
             $('#orderSearch').on('keyup', function() {
                 var searchText = $(this).val().toLowerCase();
@@ -402,8 +815,9 @@ $conn->next_result(); // Move to the next result set, if any
             // Status filter functionality
             $('.status-filter').on('click', function() {
                 // Toggle active state
-                $('.status-filter').removeClass('active bg-red-600 text-white').addClass('bg-gray-200 text-gray-700');
-                $(this).removeClass('bg-gray-200 text-gray-700').addClass('active bg-red-600 text-white');
+                $('.status-filter').removeClass('active bg-red-600 text-white').addClass('hover:bg-gray-100');
+                $(this).removeClass('hover:bg-gray-100').addClass('active bg-red-600 text-white');
+                $('#filterDropdown').addClass('hidden');
                 
                 var status = $(this).data('status');
                 
@@ -420,18 +834,19 @@ $conn->next_result(); // Move to the next result set, if any
                 }
             });
             
-            // Add confirmation before form submission
+            // Add confirmation before form submission - PRESERVED FROM ORIGINAL CODE
             $('.status-form').on('submit', function(e) {
                 var currentStatus = $(this).find('select option:selected').text();
                 var orderId = $(this).find('input[name="order_id"]').val();
                 
-                if (!confirm("Are you sure you want to update order #" + orderId + " to " + currentStatus + "?")) {
+                // Display a well-formatted confirmation dialog before updating order status
+                if (!confirm("Are you sure you want to update order #" + orderId + " to " + currentStatus + " status?")) {
                     e.preventDefault();
+                    return false;
                 }
             });
 
-            // Add this inside your $(document).ready(function() { ... });
-            // Add confirmation before rider form submission
+            // Add confirmation before rider form submission - PRESERVED FROM ORIGINAL CODE
             $('.rider-form').on('submit', function(e) {
                 var selectedRider = $(this).find('select option:selected').text();
                 var orderId = $(this).find('input[name="order_id"]').val();

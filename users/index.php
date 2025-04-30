@@ -120,7 +120,7 @@ $conn->next_result();
           <h3>About</h3>
           <h2>ABOUT EMEAT</h2>
           <p>
-            At EMEAT, we take pride in being your trusted source for high-quality, fresh, and sustainably sourced meats. Our mission is to provide a seamless online shopping experience, ensuring that you get premium cuts delivered straight to your doorstep. Whether you’re cooking for a family meal, hosting a special occasion, or running a business, we offer a diverse selection of beef, pork, and chicken products to meet your needs. With a commitment to exceptional customer service, affordability, and safety, EMEAT is not just about selling meat—it’s about creating moments that matter, one meal at a time.
+            At EMEAT, we take pride in being your trusted source for high-quality, fresh, and sustainably sourced meats. Our mission is to provide a seamless online shopping experience, ensuring that you get premium cuts delivered straight to your doorstep. Whether you're cooking for a family meal, hosting a special occasion, or running a business, we offer a diverse selection of beef, pork, and chicken products to meet your needs. With a commitment to exceptional customer service, affordability, and safety, EMEAT is not just about selling meat—it's about creating moments that matter, one meal at a time.
           <div class="button-container">
             <a href="#contact" class="custom-btn">
               </span>
@@ -212,7 +212,7 @@ $conn->next_result();
 
                                     <div class="weight-options">
                                     <label>Select Quantity:</label>
-                                    <input type="number" placeholder="QTY" class="quantity" min="1" max="<?php echo $row['QTY_AVAILABLE']; ?>">
+                                    <input type="number" placeholder="QTY" class="quantity" min="1" max="<?php echo $row['QTY_AVAILABLE']; ?>" step="0.1">
                                     <select class="unit">
                                         <option value="kg">Kg</option>
                                         <option value="g">Grams</option>
@@ -229,7 +229,18 @@ $conn->next_result();
                         <?php
                     }
                 } else {
-                    echo "<p>No products available</p>";
+                  echo '<div class="w-full flex flex-col items-center justify-center py-16 px-6 mx-auto">
+                  <div class="text-center max-w-md mx-auto">
+                    <i class="ri-shopping-bag-line text-6xl mb-4 text-gray-300 flex justify-center"></i>
+                    <h3 class="text-2xl font-bold mb-2 text-gray-700">No Products Available</h3>
+                    <p class="text-gray-500 mb-6">We\'re currently restocking our inventory. Please check back soon for new products.</p>
+                    <div class="flex justify-center">
+                      <button onclick="window.location.reload()" class="bg-[#733D3D] hover:bg-[#8F4F4F] text-black font-medium py-2 px-6 rounded-lg transition duration-300 flex items-center">
+                        <i class="ri-refresh-line mr-2"></i> Refresh
+                      </button>
+                    </div>
+                  </div>
+                </div>';
                 }
                 ?>
             </div>
@@ -279,6 +290,9 @@ $conn->next_result();
       document.querySelectorAll('.quantity').forEach(function (input) {
           let typingTimer; // Timer variable
 
+          // Set initial min attribute
+          input.setAttribute('min', '1');
+
           input.addEventListener('input', function () {
               clearTimeout(typingTimer); // Clear previous timer
 
@@ -299,26 +313,84 @@ $conn->next_result();
                           this.value = ''; // Clear input
                       }
                   } else if (unit === 'kg') {
-                      if (value <= 0) {
+                      if (value < 1) {
+                          // Block values less than 1kg
                           Swal.fire({
                               title: 'Invalid Input',
-                              text: "Kilograms must be greater than 0.",
+                              text: "Minimum order is 1 kg.",
                               icon: 'warning',
                               confirmButtonColor: '#3085d6',
                               confirmButtonText: 'OK'
                           });
-                          this.value = ''; // Clear input
+                          this.value = '1'; // Set to minimum value
                       }
                   }
-              }, 3000); // ✅ Delay validation by 3000ms to wait for user to finish typing
+              }, 2000); // Reduced delay for better UX
           });
 
-          // ✅ Handle unit change dynamically
+          // Add blur event for immediate validation
+          input.addEventListener('blur', function() {
+              clearTimeout(typingTimer);
+              validateQuantity(this);
+          });
+
+          // Handle unit change dynamically
           var unitSelect = input.closest('.weight-options').querySelector('.unit');
           unitSelect.addEventListener('change', function () {
               input.value = ''; // Clear the input when unit changes
+              
+              // Set appropriate constraints based on unit
+              if (this.value === 'kg') {
+                  input.setAttribute('min', '1');     // Minimum 1kg
+                  input.setAttribute('step', '0.1');  // Allow 0.1kg increments (after 1kg)
+              } else {
+                  input.setAttribute('step', '50');   // 50g increments
+                  input.setAttribute('min', '100');   // Minimum 100g
+              }
           });
+          
+          // Initialize with correct step attribute
+          if (unitSelect.value === 'kg') {
+              input.setAttribute('step', '0.1'); // Allow 0.1kg increments
+          } else {
+              input.setAttribute('step', '50');  // 50g increments
+          }
       });
+      
+      // Validation function
+      function validateQuantity(inputElement) {
+          const unitSelect = inputElement.closest('.weight-options').querySelector('.unit');
+          const unit = unitSelect.value;
+          const value = parseFloat(inputElement.value);
+          
+          if (isNaN(value) || inputElement.value.trim() === '') {
+              return; // Allow empty input without warning
+          }
+          
+          if (unit === 'g') {
+              if (value < 100 || value > 950) {
+                  Swal.fire({
+                      title: 'Invalid Input',
+                      text: "Grams must be between 100g and 950g.",
+                      icon: 'warning',
+                      confirmButtonColor: '#3085d6',
+                      confirmButtonText: 'OK'
+                  });
+                  inputElement.value = '';
+              }
+          } else if (unit === 'kg') {
+              if (value < 1) {
+                  Swal.fire({
+                      title: 'Invalid Input',
+                      text: "Minimum order is 1 kg.",
+                      icon: 'warning',
+                      confirmButtonColor: '#3085d6',
+                      confirmButtonText: 'OK'
+                  });
+                  inputElement.value = '1';
+              }
+          }
+      }
   });
 </script>
 

@@ -1,5 +1,5 @@
 <?php
-// filepath: /c:/xampp/htdocs/website/cart.php
+// filepath: /c:/xampp/htdocs/website/users/cart.php
 include '../connection/config.php';
 session_start();
 
@@ -127,9 +127,15 @@ if (!empty($product_ids)) {
                                 if ($unit_of_measure === 'g') {
                                     $displayQty = intval($item['quantity']); // Whole numbers for grams
                                     $step = 50; // Step by 50 grams
+                                    $min = 100; // Minimum 100g
                                 } else {
                                     $displayQty = floatval($item['quantity']); 
+                                    // Enforce minimum 1kg if less than 1
+                                    if ($displayQty < 1) {
+                                        $displayQty = 1;
+                                    }
                                     $step = 0.1; // Step by 0.1 kg
+                                    $min = 1;   // Minimum 1kg
                                 }
                                 
                                 // Calculate total price correctly
@@ -169,7 +175,7 @@ if (!empty($product_ids)) {
                                                     data-cart-index="<?php echo $index; ?>" 
                                                     data-meat-part-id="<?php echo $item['meat_part_id']; ?>"
                                                     value="<?php echo $displayQty; ?>"
-                                                    min="<?php echo ($unit_of_measure === 'g') ? '100' : '0.1'; ?>"
+                                                    min="<?php echo $min; ?>"
                                                     max="<?php echo ($unit_of_measure === 'g') ? '950' : $available_qty; ?>"
                                                     step="<?php echo $step; ?>">
                                                     
@@ -241,9 +247,19 @@ if (!empty($product_ids)) {
                         </div>
                         
                         <div class="mt-6 space-y-3">
-                            <a href="checkout.php" id="checkout-button" class="block w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors">
-                                Proceed to Checkout
-                            </a>
+                            <!-- Form-based checkout to preserve decimal values -->
+                            <form id="checkout-form" action="checkout.php" method="post">
+                                <?php foreach ($cart_items as $index => $item): ?>
+                                <input type="hidden" name="cart_items[<?php echo $index; ?>][meat_part_id]" value="<?php echo $item['meat_part_id']; ?>">
+                                <input type="hidden" name="cart_items[<?php echo $index; ?>][quantity]" value="<?php echo floatval($item['quantity']); ?>">
+                                <input type="hidden" name="cart_items[<?php echo $index; ?>][unit]" value="<?php echo $item['unit']; ?>">
+                                <input type="hidden" name="cart_items[<?php echo $index; ?>][product_name]" value="<?php echo htmlspecialchars($item['product_name']); ?>">
+                                <input type="hidden" name="cart_items[<?php echo $index; ?>][unit_price]" value="<?php echo $item['unit_price']; ?>">
+                                <?php endforeach; ?>
+                                <button type="submit" id="checkout-button" class="block w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors">
+                                    Proceed to Checkout
+                                </button>
+                            </form>
                             <a href="index.php#shop" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg text-center transition-colors">
                                 Continue Shopping
                             </a>
@@ -315,18 +331,52 @@ if (!empty($product_ids)) {
         updateTotalAmount();
     }
 
-    // Handle quantity input changes
+    // Update min attribute for all KG inputs
+    document.querySelectorAll(".qty-input").forEach(input => {
+        const row = input.closest("tr");
+        const unitSpan = row.querySelector(".unit-of-measure");
+        const unitOfMeasure = unitSpan ? unitSpan.textContent.trim().toUpperCase() : "KG";
+        
+        if (unitOfMeasure === "KG") {
+            input.setAttribute("min", "1"); // Set minimum to 1kg
+        }
+    });
+
+    // Handle quantity input changes with validation
     document.querySelectorAll(".qty-input").forEach(input => {
         input.addEventListener("change", function() {
             const row = this.closest("tr");
             const cartIndex = this.getAttribute("data-cart-index");
             const meatPartId = this.getAttribute("data-meat-part-id");
             const unitElement = row.querySelector(".unit-of-measure");
-            const unitOfMeasure = unitElement ? unitElement.textContent.trim() : "KG";
-            const newQuantity = parseFloat(this.value);
+            const unitOfMeasure = unitElement ? unitElement.textContent.trim().toUpperCase() : "KG";
+            let newQuantity = parseFloat(this.value);
+            
+            // Validate quantity - prevent values between 0.1 and 0.9 kg
+            if (unitOfMeasure === "KG" && newQuantity < 1) {
+                Swal.fire({
+                    title: 'Invalid Quantity',
+                    text: "Minimum quantity for kilograms is 1 kg",
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                
+                newQuantity = 1; // Correct the value to minimum
+                this.value = "1"; // Update input display
+            }
             
             // Update subtotal immediately for responsive UI
             updateProductSubtotal(row, newQuantity);
+            
+            // Update hidden form input for checkout
+            const checkoutForm = document.getElementById('checkout-form');
+            if (checkoutForm) {
+                const hiddenInput = checkoutForm.querySelector(`input[name="cart_items[${cartIndex}][quantity]"]`);
+                if (hiddenInput) {
+                    hiddenInput.value = newQuantity;
+                }
+            }
             
             // Update database and session via AJAX
             fetch("../back_process/update_session_cart.php", {
@@ -373,7 +423,7 @@ if (!empty($product_ids)) {
             const input = this.parentElement.querySelector(".qty-input");
             const row = this.closest("tr");
             const unitSpan = row.querySelector(".unit-of-measure");
-            const unitOfMeasure = unitSpan ? unitSpan.textContent.trim() : "KG";
+            const unitOfMeasure = unitSpan ? unitSpan.textContent.trim().toUpperCase() : "KG";
             
             let currentValue = parseFloat(input.value);
             let newValue;
@@ -381,7 +431,8 @@ if (!empty($product_ids)) {
             if (unitOfMeasure === "G") {
                 newValue = Math.max(100, currentValue - 50);
             } else if (unitOfMeasure === "KG") {
-                newValue = Math.max(0.1, (currentValue - 0.1)).toFixed(1);
+                // For kg, don't allow going below 1kg
+                newValue = Math.max(1, (currentValue - 0.1).toFixed(1));
             }
             
             if (parseFloat(newValue) !== currentValue) {
@@ -397,7 +448,7 @@ if (!empty($product_ids)) {
             const input = this.parentElement.querySelector(".qty-input");
             const row = this.closest("tr");
             const unitSpan = row.querySelector(".unit-of-measure");
-            const unitOfMeasure = unitSpan ? unitSpan.textContent.trim() : "KG";
+            const unitOfMeasure = unitSpan ? unitSpan.textContent.trim().toUpperCase() : "KG";
             
             let currentValue = parseFloat(input.value);
             let newValue;
@@ -442,6 +493,19 @@ if (!empty($product_ids)) {
             
             input.value = newValue;
             input.dispatchEvent(new Event('change'));
+        });
+    });
+
+    // Handle checkout form submission - ensure quantities are preserved
+    document.getElementById('checkout-form').addEventListener('submit', function(e) {
+        // Update all hidden inputs with current values
+        document.querySelectorAll('.qty-input').forEach(input => {
+            const cartIndex = input.getAttribute('data-cart-index');
+            const currentQty = parseFloat(input.value);
+            const hiddenInput = this.querySelector(`input[name="cart_items[${cartIndex}][quantity]"]`);
+            if (hiddenInput) {
+                hiddenInput.value = currentQty;
+            }
         });
     });
 
@@ -584,6 +648,17 @@ if (!empty($product_ids)) {
             // Update delete button index
             const deleteBtn = row.querySelector('.delete-item');
             if (deleteBtn) deleteBtn.setAttribute('data-cart-index', newIndex);
+            
+            // Also update form hidden inputs
+            const checkoutForm = document.getElementById('checkout-form');
+            if (checkoutForm) {
+                const hiddenInputs = checkoutForm.querySelectorAll(`input[name^="cart_items[${row.getAttribute('data-cart-index')}]"]`);
+                hiddenInputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    const newName = name.replace(/cart_items\[\d+\]/, `cart_items[${newIndex}]`);
+                    input.setAttribute('name', newName);
+                });
+            }
         });
     }
     });

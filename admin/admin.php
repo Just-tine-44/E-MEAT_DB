@@ -384,7 +384,7 @@ if ($conn->multi_query($query)) {
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3">${purchase.meat_category}</td>
                             <td class="px-4 py-3">${purchase.MEAT_PART_NAME.toUpperCase()}</td>
-                            <td class="px-4 py-3">${purchase.total_quantity} ${purchase.UNIT_OF_MEASURE}</td>
+                            <td class="px-4 py-3">${parseFloat(purchase.total_quantity).toFixed(1)} ${purchase.UNIT_OF_MEASURE}</td>
                             <td class="px-4 py-3">₱${parseFloat(purchase.UNIT_PRICE).toFixed(2)}</td>
                             <td class="px-4 py-3 font-medium text-green-600">₱${parseFloat(purchase.total_amount).toFixed(2)}</td>
                             <td class="px-4 py-3">${new Date(purchase.order_date).toLocaleDateString('en-CA')}</td>

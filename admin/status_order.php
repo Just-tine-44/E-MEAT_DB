@@ -67,38 +67,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $stmt->close();
 }
 
-// Rider assignment handler
+// In your rider assignment handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_rider'])) {
     $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
     $rider_id = isset($_POST['rider_id']) ? intval($_POST['rider_id']) : 0;
     
-    // Debugging log
-    error_log("Assigning Rider to Order ID: " . $order_id . ", Rider ID: " . $rider_id);
-
     if ($order_id && $rider_id) {
-        // Call stored procedure to update the order with the assigned rider
-        $rider_sql = "CALL sp_update_rider_assigned(?, ?)";
+        // Call stored procedure with output parameters
+        $rider_sql = "CALL sp_update_rider_assigned(?, ?, @success, @message)";
         $rider_stmt = $conn->prepare($rider_sql);
-        if ($rider_stmt === false) {
-            die("Prepare failed: " . $conn->error);
-        }
         $rider_stmt->bind_param("ii", $rider_id, $order_id);
-
-        if ($rider_stmt->execute()) {
-            $_SESSION['success_message'] = "Rider assigned successfully."; // Store in session
-            // Instead of header redirect, use JavaScript
-            echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
-            exit;
+        $rider_stmt->execute();
+        
+        // Get output parameters
+        $result = $conn->query("SELECT @success as success, @message as message");
+        $output = $result->fetch_assoc();
+        
+        if ($output['success']) {
+            $_SESSION['success_message'] = $output['message'];
         } else {
-            $_SESSION['error_message'] = "Error assigning rider: " . $rider_stmt->error; // Store in session
-            // Instead of header redirect, use JavaScript
-            echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
-            exit;
+            $_SESSION['error_message'] = $output['message'];
         }
-        $rider_stmt->close();
-    } else {
-        $_SESSION['error_message'] = "Invalid order or rider selection."; // Store in session
-        // Instead of header redirect, use JavaScript
+        
         echo "<script>window.location.href = '" . $_SERVER['PHP_SELF'] . "';</script>";
         exit;
     }
@@ -482,14 +472,14 @@ $conn->next_result(); // Move to the next result set, if any
                                         <form method="post" class="status-form">
                                             <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
                                             <div class="flex gap-2">
-                                                <select name="status" class="status-select text-sm border border-gray-300 rounded-lg px-3 py-2 flex-1 focus:ring-2 focus:ring-red-500 focus:outline-none" data-original-status="<?= $row['STAT_ID'] ?>">
+                                                <select name="status" class="status-select text-sm border border-gray-300 rounded-lg px-3 py-2 flex-1 focus:ring-2 focus:ring-red-500 focus:outline-none <?= ($row['STAT_ID'] == 5) ? 'bg-gray-100 cursor-not-allowed' : '' ?>" data-original-status="<?= $row['STAT_ID'] ?>" <?= ($row['STAT_ID'] == 5) ? 'disabled' : '' ?>>
                                                     <?php foreach ($status_options as $stat_id => $status_name): ?>
                                                         <option value="<?= $stat_id ?>" <?= ($row['STAT_ID'] == $stat_id) ? 'selected' : '' ?>>
                                                             <?= $status_name ?>
                                                         </option>
                                                     <?php endforeach; ?>
                                                 </select>
-                                                <button type="submit" name="update_status" class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                <button type="submit" name="update_status" class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-1 <?= ($row['STAT_ID'] == 5) ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : '' ?>" <?= ($row['STAT_ID'] == 5) ? 'disabled' : '' ?>>
                                                     <i class="fas fa-save"></i> Update
                                                 </button>
                                             </div>
@@ -497,14 +487,14 @@ $conn->next_result(); // Move to the next result set, if any
                                         
                                         <!-- Rider Assignment (hidden when pending, disabled when assigned) -->
                                         <?php if (empty($row['rider_name'])): ?>
-                                            <form method="post" class="rider-form mt-2" <?= $row['STAT_ID'] == 1 ? 'style="display:none;"' : '' ?>>
+                                            <form method="post" class="rider-form mt-2" <?= ($row['STAT_ID'] != 2) ? 'style="display:none;"' : '' ?>>
                                                 <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
                                                 <div class="flex gap-2">
                                                     <select name="rider_id" class="text-sm border border-gray-300 rounded-lg px-3 py-2 flex-1 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                                         <option value="">Select Rider</option>
                                                         <?php if($riders): $riders->data_seek(0); ?>
                                                             <?php while ($rider = $riders->fetch_assoc()): ?>
-                                                                <option value="<?= $rider['rider_id'] ?>" <?= (isset($row['RIDER_ID']) && $row['RIDER_ID'] == $rider['rider_id']) ? 'selected' : '' ?>>
+                                                                <option value="<?= $rider['rider_id'] ?>">
                                                                     <?= htmlspecialchars($rider['rider_name']) ?>
                                                                 </option>
                                                             <?php endwhile; ?>
@@ -516,6 +506,7 @@ $conn->next_result(); // Move to the next result set, if any
                                                 </div>
                                             </form>
                                         <?php else: ?>
+                                            <!-- Display rider info only in mobile view since there's no separate column -->
                                             <div class="rider-assigned flex items-center mt-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
                                                 <div class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
                                                     <i class="fas fa-motorcycle"></i>
@@ -679,14 +670,14 @@ $conn->next_result(); // Move to the next result set, if any
                                                 <form method="post" class="status-form">
                                                     <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
                                                     <div class="flex items-center space-x-2">
-                                                        <select name="status" class="status-select text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-red-500 focus:outline-none flex-grow" data-original-status="<?= $row['STAT_ID'] ?>">
+                                                        <select name="status" class="status-select text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-red-500 focus:outline-none flex-grow <?= ($row['STAT_ID'] == 5) ? 'bg-gray-100 cursor-not-allowed' : '' ?>" data-original-status="<?= $row['STAT_ID'] ?>" <?= ($row['STAT_ID'] == 5) ? 'disabled' : '' ?>>
                                                             <?php foreach ($status_options as $stat_id => $status_name): ?>
                                                                 <option value="<?= $stat_id ?>" <?= ($row['STAT_ID'] == $stat_id) ? 'selected' : '' ?>>
                                                                     <?= $status_name ?>
                                                                 </option>
                                                             <?php endforeach; ?>
                                                         </select>
-                                                        <button type="submit" name="update_status" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                                                        <button type="submit" name="update_status" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap <?= ($row['STAT_ID'] == 5) ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : '' ?>" <?= ($row['STAT_ID'] == 5) ? 'disabled' : '' ?>>
                                                             Update
                                                         </button>
                                                     </div>
@@ -694,14 +685,14 @@ $conn->next_result(); // Move to the next result set, if any
 
                                                 <!-- Rider Assignment Form (hidden when pending, disabled when assigned) -->
                                                 <?php if (empty($row['rider_name'])): ?>
-                                                    <form method="post" class="rider-form" <?= $row['STAT_ID'] == 1 ? 'style="display:none;"' : '' ?>>
+                                                    <form method="post" class="rider-form" <?= ($row['STAT_ID'] != 2) ? 'style="display:none;"' : '' ?>>
                                                         <input type="hidden" name="order_id" value="<?= $row['ORDERS_ID'] ?>">
                                                         <div class="flex items-center space-x-2">
                                                             <select name="rider_id" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none flex-grow">
                                                                 <option value="">Select Rider</option>
                                                                 <?php if($riders): $riders->data_seek(0); ?>
                                                                     <?php while ($rider = $riders->fetch_assoc()): ?>
-                                                                        <option value="<?= $rider['rider_id'] ?>" <?= (isset($row['RIDER_ID']) && $row['RIDER_ID'] == $rider['rider_id']) ? 'selected' : '' ?>>
+                                                                        <option value="<?= $rider['rider_id'] ?>">
                                                                             <?= htmlspecialchars($rider['rider_name']) ?>
                                                                         </option>
                                                                     <?php endwhile; ?>
@@ -712,16 +703,6 @@ $conn->next_result(); // Move to the next result set, if any
                                                             </button>
                                                         </div>
                                                     </form>
-                                                <?php else: ?>
-                                                    <div class="rider-assigned flex items-center mt-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
-                                                        <div class="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-1.5">
-                                                            <i class="fas fa-motorcycle text-xs"></i>
-                                                        </div>
-                                                        <div>
-                                                            <div class="text-xs font-medium"><?= htmlspecialchars($row['rider_name']) ?></div>
-                                                            <div class="text-xs text-gray-500"><?= htmlspecialchars($row['rider_contact']) ?></div>
-                                                        </div>
-                                                    </div>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
@@ -745,28 +726,31 @@ $conn->next_result(); // Move to the next result set, if any
         </div>
     </div>
     
-    <script>
-        $(document).ready(function() {
-            // Initially hide rider assignment for pending orders
-            $('.order-row').each(function() {
-                var statusId = $(this).data('status');
-                if (statusId == 1) { // If status is "Pending"
-                    $(this).find('.rider-form').hide();
-                }
-            });
+<script>
+    $(document).ready(function() {
+        // Initially hide rider assignment for pending orders
+        $('.order-row').each(function() {
+            var statusId = $(this).data('status');
             
-            // Show rider assignment when status changes from pending
-            $('.status-select').on('change', function() {
-                var currentStatusId = $(this).val();
-                var originalStatusId = $(this).data('original-status');
-                var orderRow = $(this).closest('.order-row');
+            // Hide rider form for all statuses except Processing (2)
+            if (statusId != 2) {
+                $(this).find('.rider-form').hide();
+            }
+        });
+        
+        // Status change handler - only to show/hide rider form
+        $('.status-select').on('change', function() {
+            var currentStatusId = parseInt($(this).val());
+            var originalStatusId = parseInt($(this).data('original-status'));
+            var orderRow = $(this).closest('.order-row');
+            
+            // Show rider assignment ONLY when status is "Processing" (ID 2)
+            if (currentStatusId == 2) {
+                // Show the rider assignment form with animation
+                orderRow.find('.rider-form').fadeIn(300).addClass('fadeIn');
                 
-                // If changing from "Pending" (1) to something else
-                if (originalStatusId == 1 && currentStatusId != 1) {
-                    // Show the rider assignment form with a nice animation
-                    orderRow.find('.rider-form').fadeIn(300).addClass('fadeIn');
-                    
-                    // Show a notification
+                // Only show notification if this is a new change to Processing
+                if (originalStatusId != 2) {
                     Swal.fire({
                         title: "Ready for Rider Assignment",
                         text: "Now you can assign a rider to this order",
@@ -777,92 +761,118 @@ $conn->next_result(); // Move to the next result set, if any
                         timer: 3000,
                         timerProgressBar: true
                     });
-                } 
-                // If changing back to pending, hide the rider assignment
-                else if (currentStatusId == 1) {
-                    orderRow.find('.rider-form').fadeOut(200);
+                }
+            } 
+            // Hide the rider form if changing to anything other than Processing
+            else {
+                orderRow.find('.rider-form').fadeOut(200);
+            }
+        });
+        
+        // Toggle filter dropdown
+        $('#filterBtn').on('click', function(e) {
+            e.stopPropagation();
+            $('#filterDropdown').toggleClass('hidden');
+        });
+        
+        // Hide filter dropdown when clicking elsewhere
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#filterBtn').length && !$(e.target).closest('#filterDropdown').length) {
+                $('#filterDropdown').addClass('hidden');
+            }
+        });
+        
+        // Search functionality - search by customer name
+        $('#orderSearch').on('keyup', function() {
+            var searchText = $(this).val().toLowerCase();
+            $('.order-row').each(function() {
+                var customerName = $(this).find('td:nth-child(1)').text().toLowerCase();
+                
+                if (customerName.includes(searchText)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
                 }
             });
-            
-            // Toggle filter dropdown
-            $('#filterBtn').on('click', function(e) {
-                e.stopPropagation();
-                $('#filterDropdown').toggleClass('hidden');
-            });
-            
-            // Hide filter dropdown when clicking elsewhere
-            $(document).on('click', function(e) {
-                if (!$(e.target).closest('#filterBtn').length && !$(e.target).closest('#filterDropdown').length) {
-                    $('#filterDropdown').addClass('hidden');
+
+            // For mobile view
+            $('.order-card').each(function() {
+                var customerName = $(this).find('h3').text().toLowerCase();
+                
+                if (customerName.includes(searchText)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
                 }
             });
+        });
+        
+        // Status filter functionality
+        $('.status-filter').on('click', function() {
+            // Toggle active state
+            $('.status-filter').removeClass('active bg-red-600 text-white').addClass('hover:bg-gray-100');
+            $(this).removeClass('hover:bg-gray-100').addClass('active bg-red-600 text-white');
+            $('#filterDropdown').addClass('hidden');
             
-            // Search functionality
-            $('#orderSearch').on('keyup', function() {
-                var searchText = $(this).val().toLowerCase();
-                $('.order-row').each(function() {
-                    var customerName = $(this).find('td:nth-child(1)').text().toLowerCase();
-                    
-                    // Only search in customer name
-                    if (customerName.includes(searchText)) {
+            var status = $(this).data('status');
+            
+            if (status === 'all') {
+                $('.order-row, .order-card').show();
+            } else {
+                $('.order-row, .order-card').each(function() {
+                    if ($(this).data('status') == status) {
                         $(this).show();
                     } else {
                         $(this).hide();
                     }
                 });
-            });
-            
-            // Status filter functionality
-            $('.status-filter').on('click', function() {
-                // Toggle active state
-                $('.status-filter').removeClass('active bg-red-600 text-white').addClass('hover:bg-gray-100');
-                $(this).removeClass('hover:bg-gray-100').addClass('active bg-red-600 text-white');
-                $('#filterDropdown').addClass('hidden');
-                
-                var status = $(this).data('status');
-                
-                if (status === 'all') {
-                    $('.order-row').show();
-                } else {
-                    $('.order-row').each(function() {
-                        if ($(this).data('status') == status) {
-                            $(this).show();
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-                }
-            });
-            
-            // Add confirmation before form submission - PRESERVED FROM ORIGINAL CODE
-            $('.status-form').on('submit', function(e) {
-                var currentStatus = $(this).find('select option:selected').text();
-                var orderId = $(this).find('input[name="order_id"]').val();
-                
-                // Display a well-formatted confirmation dialog before updating order status
-                if (!confirm("Are you sure you want to update order #" + orderId + " to " + currentStatus + " status?")) {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-
-            // Add confirmation before rider form submission - PRESERVED FROM ORIGINAL CODE
-            $('.rider-form').on('submit', function(e) {
-                var selectedRider = $(this).find('select option:selected').text();
-                var orderId = $(this).find('input[name="order_id"]').val();
-                
-                if (selectedRider === 'Select Rider') {
-                    alert("Please select a rider first.");
-                    e.preventDefault();
-                    return false;
-                }
-                
-                if (!confirm("Are you sure you want to assign " + selectedRider + " to order #" + orderId + "?")) {
-                    e.preventDefault();
-                }
-            });
+            }
         });
-    </script>
+        
+        // Use regular confirmation for status update
+        $('.status-form').on('submit', function(e) {
+            var form = $(this);
+            var currentStatusId = parseInt(form.find('select').val());
+            var currentStatus = form.find('select option:selected').text();
+            var orderId = form.find('input[name="order_id"]').val();
+            
+            // If button is already disabled, prevent submission
+            if (form.find('button[name="update_status"]').prop('disabled')) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Use standard confirm dialog
+            if (!confirm("Are you sure you want to update order #" + orderId + " to " + currentStatus + " status?")) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Use standard confirmation for rider assignment
+        $('.rider-form').on('submit', function(e) {
+            var form = $(this);
+            var selectElement = form.find('select');
+            var selectedOption = selectElement.find('option:selected');
+            var selectedValue = selectedOption.val();
+            var selectedRider = selectedOption.text();
+            var orderId = form.find('input[name="order_id"]').val();
+            
+            // Check if a rider is selected
+            if (!selectedValue || selectedValue === '') {
+                alert("Please select a rider first");
+                e.preventDefault();
+                return false;
+            }
+            
+            // Use standard confirm dialog
+            if (!confirm("Are you sure you want to assign " + selectedRider + " to order #" + orderId + "?")) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
+</script>
 </body>
 </html>
 

@@ -1,5 +1,4 @@
 <?php
-
 session_start(); // Start the session
 
 // To match what login.php is setting:
@@ -12,6 +11,41 @@ if(!isset($_SESSION['username']) || !isset($_SESSION['user_id']) || $_SESSION['u
 // Include the sidebar first
 include('new_include/sidebar.php');
 include '../connection/config.php'; // Database connection
+
+// Initialize date filters
+$end_date = date('Y-m-d');
+$start_date = date('Y-m-d', strtotime('-30 days'));
+$filter_type = 'last30days';
+
+// Handle filter selection
+if (isset($_GET['filter_type'])) {
+    $filter_type = $_GET['filter_type'];
+    
+    switch ($filter_type) {
+        case 'today':
+            $start_date = $end_date = date('Y-m-d');
+            break;
+        case 'thisweek':
+            $start_date = date('Y-m-d', strtotime('monday this week'));
+            break;
+        case 'thismonth':
+            $start_date = date('Y-m-d', strtotime('first day of this month'));
+            break;
+        case 'custom':
+            if (isset($_GET['start_date']) && isset($_GET['end_date'])) {
+                $start_date = $_GET['start_date'];
+                $end_date = $_GET['end_date'];
+            }
+            break;
+    }
+} elseif (isset($_GET['start_date']) && isset($_GET['end_date'])) {
+    $start_date = $_GET['start_date'];
+    $end_date = $_GET['end_date'];
+    $filter_type = 'custom';
+}
+
+$db_start_date = $start_date . ' 00:00:00';
+$db_end_date = $end_date . ' 23:59:59';
 
 // Fetch total quantity for each category using stored procedure
 $pork_stock = 0;
@@ -41,45 +75,47 @@ if ($result) {
     $conn->next_result(); // Move to the next result set, if any
 }
 
-// Purchase Details
-$query = "CALL GetMeatPurchaseDetailed()";
-$result = $conn->query($query);
+// Purchase Details with date filtering
+try {
+    $stmt = $conn->prepare("CALL GetMeatPurchaseDetailedByDate(?, ?)");
+    $stmt->bind_param("ss", $db_start_date, $db_end_date);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-$customers = [];
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $customers[$row['customer_name']][] = $row; // Store separately per order
+    $customers = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $customers[$row['customer_name']][] = $row; // Store separately per order
+        }
     }
-    $result->close();
-    $conn->next_result();
-} else {
-    die("Error fetching purchase details: " . $conn->error);
+    $stmt->close();
+    $conn->next_result(); // Clear result sets
+} catch (Exception $e) {
+    error_log("Error fetching purchase details: " . $e->getMessage());
 }
 
-// Sales Overview
-$query = "CALL GetSalesOverview()";
-$total_sales_all_time = 0;
-$total_sales_last_1_day = 0;
-$total_sales_this_week = 0;
-$total_sales_this_month = 0;
-
-if ($conn->multi_query($query)) {
-    do {
-        if ($result = $conn->store_result()) {
-            while ($row = $result->fetch_assoc()) {
-                if (isset($row['total_sales_all_time'])) {
-                    $total_sales_all_time = $row['total_sales_all_time'];
-                } elseif (isset($row['total_sales_last_1_day'])) {
-                    $total_sales_last_1_day = $row['total_sales_last_1_day'];
-                } elseif (isset($row['total_sales_this_week'])) {
-                    $total_sales_this_week = $row['total_sales_this_week'];
-                } elseif (isset($row['total_sales_this_month'])) {
-                    $total_sales_this_month = $row['total_sales_this_month'];
-                }
-            }
-            $result->free();
-        }
-    } while ($conn->more_results() && $conn->next_result());
+// Sales Overview with date filtering
+try {
+    $stmt = $conn->prepare("CALL GetSalesOverviewByDate(?, ?)");
+    $stmt->bind_param("ss", $db_start_date, $db_end_date);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $total_sales_all_time = 0; // Will be replaced with period sales
+    $total_sales_last_1_day = 0;
+    $total_sales_this_week = 0;
+    $total_sales_this_month = 0;
+    
+    if ($result && $row = $result->fetch_assoc()) {
+        $total_sales_all_time = $row['total_sales_period'];
+        $total_sales_last_1_day = $row['total_sales_last_1_day'];
+        $total_sales_this_week = $row['total_sales_this_week'];
+        $total_sales_this_month = $row['total_sales_this_month'];
+    }
+    $stmt->close();
+    
+} catch (Exception $e) {
+    error_log("Error fetching sales overview: " . $e->getMessage());
 }
 ?>
 
@@ -103,6 +139,12 @@ if ($conn->multi_query($query)) {
             font-family: 'Poppins', sans-serif;
             background-color: #f9fafb;
         }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -117,6 +159,37 @@ if ($conn->multi_query($query)) {
                     <span>E-MEAT</span>
                     <i class="fas fa-chevron-right text-xs"></i>
                     <span>Admin Panel</span>
+                </div>
+            </div>
+            
+            <!-- Date Filter Section -->
+            <div class="mb-6 bg-white rounded-lg shadow-sm p-4 no-print">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-3 md:mb-0">
+                        <i class="fas fa-calendar-alt text-red-500 mr-2"></i> Date Range Filter
+                    </h2>
+                    
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <a href="?filter_type=today" class="px-3 py-1.5 rounded-lg text-sm border <?= $filter_type == 'today' ? 'bg-red-600 text-white' : 'border-gray-200 hover:bg-gray-50' ?>">Today</a>
+                        <a href="?filter_type=thisweek" class="px-3 py-1.5 rounded-lg text-sm border <?= $filter_type == 'thisweek' ? 'bg-red-600 text-white' : 'border-gray-200 hover:bg-gray-50' ?>">This Week</a>
+                        <a href="?filter_type=thismonth" class="px-3 py-1.5 rounded-lg text-sm border <?= $filter_type == 'thismonth' ? 'bg-red-600 text-white' : 'border-gray-200 hover:bg-gray-50' ?>">This Month</a>
+                        
+                        <form id="dateRangeForm" action="" method="GET" class="flex items-center">
+                            <input type="hidden" name="filter_type" value="custom">
+                            <input type="date" name="start_date" value="<?= $start_date ?>" class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 w-32">
+                            <span class="mx-1 text-gray-500">to</span>
+                            <input type="date" name="end_date" value="<?= $end_date ?>" class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 w-32">
+                            <button type="submit" class="ml-2 bg-red-600 text-white text-sm px-3 py-1.5 rounded-lg">Apply</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="mt-3 inline-flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <span>
+                        Showing data from <?= date('F d, Y', strtotime($start_date)) ?> 
+                        <?= ($start_date != $end_date) ? ' to ' . date('F d, Y', strtotime($end_date)) : '' ?>
+                    </span>
                 </div>
             </div>
 
@@ -192,23 +265,25 @@ if ($conn->multi_query($query)) {
                 <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <i class="fas fa-chart-line text-red-500"></i> Sales Overview
                 </h2>
-                <button id="printSalesBtn" class="px-4 py-2 mb-4 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+                <button id="printSalesBtn" class="px-4 py-2 mb-4 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors no-print">
                     <i class="fas fa-print"></i> Print Report
                 </button>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <!-- All Time Sales -->
+                    <!-- Selected Period Sales -->
                     <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
                         <div class="flex items-center justify-between mb-4">
-                            <p class="text-sm font-medium text-gray-500">Total Sales (All Time)</p>
-                            <div class="bg-blue-100 text-blue-800 p-2 rounded-lg">
-                                <i class="fas fa-calendar"></i>
+                            <p class="text-sm font-medium text-gray-500">Selected Period Sales</p>
+                            <div class="bg-red-100 text-red-800 p-2 rounded-lg">
+                                <i class="fas fa-calendar-day"></i>
                             </div>
                         </div>
                         <p class="text-2xl font-bold text-gray-800 flex items-center">
                             <span class="text-lg mr-1">₱</span>
                             <?php echo number_format($total_sales_all_time, 2); ?>
                         </p>
-                        <div class="mt-2 text-xs text-gray-400">Since the beginning</div>
+                        <div class="mt-2 text-xs text-gray-400">
+                            <?= date('M d', strtotime($start_date)) ?> - <?= date('M d', strtotime($end_date)) ?>
+                        </div>
                     </div>
 
                     <!-- Last 24 Hours Sales -->
@@ -264,45 +339,51 @@ if ($conn->multi_query($query)) {
                 <i class="fas fa-shopping-cart text-red-500"></i> Purchase Details
                 </h2>
                 <div class="bg-white rounded-xl shadow overflow-hidden border border-gray-100">
-                <div class="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                    <div class="font-medium text-gray-700">Customer Purchases</div>
-                    <input type="text" id="customerSearch" placeholder="Search customer..." 
-                    class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                </div>
-                <div class="overflow-x-auto">
-                    <div class="max-h-64 overflow-y-auto" style="max-height: calc(4 * 56px);">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50 sticky top-0 z-10">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Customer Name
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200" id="customerTable">
-                        <?php foreach ($customers as $customer_name => $purchases): ?>
-                            <tr class="hover:bg-gray-50 customer-row">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <a href="#" class="customer-link text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
-                                data-customer='<?= htmlspecialchars(json_encode($purchases)) ?>' 
-                                data-customer-name='<?= htmlspecialchars($customer_name) ?>'>
-                                <i class="fas fa-user"></i>
-                                <?= htmlspecialchars($customer_name) ?>
-                                </a>
-                            </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                    <div class="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                        <div class="font-medium text-gray-700">Customer Purchases</div>
+                        <input type="text" id="customerSearch" placeholder="Search customer..." 
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 no-print">
                     </div>
-                </div>
+                    <div class="overflow-x-auto">
+                        <div class="max-h-64 overflow-y-auto" style="max-height: calc(4 * 56px);">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Customer Name
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="customerTable">
+                            <?php if (count($customers) > 0): ?>
+                                <?php foreach ($customers as $customer_name => $purchases): ?>
+                                    <tr class="hover:bg-gray-50 customer-row">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <a href="#" class="customer-link text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+                                        data-customer='<?= htmlspecialchars(json_encode($purchases)) ?>' 
+                                        data-customer-name='<?= htmlspecialchars($customer_name) ?>'>
+                                        <i class="fas fa-user"></i>
+                                        <?= htmlspecialchars($customer_name) ?>
+                                        </a>
+                                    </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td class="px-6 py-4 text-center text-gray-500">No customers found in the selected date range</td>
+                                </tr>
+                            <?php endif; ?>
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Modal for Purchase Details -->
-    <div id="purchaseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div id="purchaseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 no-print">
         <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div class="flex items-center justify-between p-4 border-b border-gray-200">
                 <h3 class="text-lg font-bold text-gray-800" id="purchaseDetailsModalLabel">Purchase Details</h3>
@@ -340,6 +421,24 @@ if ($conn->multi_query($query)) {
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Date range validation
+        const startDateInput = document.querySelector('input[name="start_date"]');
+        const endDateInput = document.querySelector('input[name="end_date"]');
+        
+        endDateInput.addEventListener('change', function() {
+            if (endDateInput.value < startDateInput.value) {
+                endDateInput.value = startDateInput.value;
+                alert('End date cannot be before start date');
+            }
+        });
+        
+        startDateInput.addEventListener('change', function() {
+            if (startDateInput.value > endDateInput.value) {
+                startDateInput.value = endDateInput.value;
+                alert('Start date cannot be after end date');
+            }
+        });
+        
         // Customer search functionality
         document.getElementById('customerSearch').addEventListener('keyup', function() {
             const searchText = this.value.toLowerCase();
@@ -425,6 +524,7 @@ if ($conn->multi_query($query)) {
                 <body>
                     <h1>E-MEAT Sales Report</h1>
                     <p class="report-date">Generated on: ${new Date().toLocaleString()}</p>
+                    <p class="report-date">Period: <?= date('F d, Y', strtotime($start_date)) ?> to <?= date('F d, Y', strtotime($end_date)) ?></p>
                     
                     <h2>Sales Overview</h2>
                     <table>
@@ -436,7 +536,7 @@ if ($conn->multi_query($query)) {
                         </thead>
                         <tbody>
                             <tr>
-                                <td>All Time Sales</td>
+                                <td>Selected Period Sales</td>
                                 <td class="amount">₱ <?php echo number_format($total_sales_all_time, 2); ?></td>
                             </tr>
                             <tr>
@@ -497,6 +597,10 @@ if ($conn->multi_query($query)) {
             doc.setTextColor(100, 100, 100);
             doc.text("Generated on: " + new Date().toLocaleString(), pageWidth / 2, y, { align: 'center' });
             
+            // Add filter period
+            y += 15;
+            doc.text("Period: <?= date('F d, Y', strtotime($start_date)) ?> to <?= date('F d, Y', strtotime($end_date)) ?>", pageWidth / 2, y, { align: 'center' });
+            
             // Add customer name
             y += 25;
             doc.setFontSize(14);
@@ -518,13 +622,13 @@ if ($conn->multi_query($query)) {
                 
                 // Handle different unit types
                 if (unitLower === 'kg') {
-                    kgCount += parseInt(purchase.total_quantity);
+                    kgCount += parseFloat(purchase.total_quantity);
                     hasKg = true;
                 } else if (unitLower === 'g' || unitLower === 'grams') {
-                    gramsCount += parseInt(purchase.total_quantity);
+                    gramsCount += parseFloat(purchase.total_quantity);
                     hasGrams = true;
                 } else if (unitLower === 'pcs' || unitLower === 'pc' || unitLower === 'piece' || unitLower === 'pieces') {
-                    pcsCount += parseInt(purchase.total_quantity);
+                    pcsCount += parseFloat(purchase.total_quantity);
                     hasPcs = true;
                 }
                 
@@ -534,19 +638,19 @@ if ($conn->multi_query($query)) {
             // Create a formatted total quantity string
             let totalQuantityString = "";
             if (hasKg) {
-                totalQuantityString += kgCount + " KG";
+                totalQuantityString += kgCount.toFixed(2) + " KG";
             }
             if ((hasKg && hasGrams) || (hasKg && hasPcs)) {
                 totalQuantityString += " + ";
             }
             if (hasGrams) {
-                totalQuantityString += gramsCount + " g";
+                totalQuantityString += gramsCount.toFixed(2) + " g";
             }
             if ((hasGrams && hasPcs) && (hasKg || hasGrams)) {
                 totalQuantityString += " + ";
             }
             if (hasPcs) {
-                totalQuantityString += pcsCount + " pcs";
+                totalQuantityString += pcsCount.toFixed(2) + " pcs";
             }
             if (!totalQuantityString) {
                 totalQuantityString = "0"; // Fallback if no quantities
@@ -618,7 +722,9 @@ if ($conn->multi_query($query)) {
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text(
-                "This report shows all purchases made by " + currentCustomerName + ". All amounts are in Philippine Peso (PHP).",
+                "This report shows all purchases made by " + currentCustomerName + " between " + 
+                "<?= date('F d, Y', strtotime($start_date)) ?> and <?= date('F d, Y', strtotime($end_date)) ?>. " +
+                "All amounts are in Philippine Peso (PHP).",
                 40, 
                 finalY + 20
             );
@@ -647,13 +753,13 @@ if ($conn->multi_query($query)) {
                 
                 // Handle different unit types
                 if (unitLower === 'kg') {
-                    kgCount += parseInt(purchase.total_quantity);
+                    kgCount += parseFloat(purchase.total_quantity);
                     hasKg = true;
                 } else if (unitLower === 'g' || unitLower === 'grams') {
-                    gramsCount += parseInt(purchase.total_quantity);
+                    gramsCount += parseFloat(purchase.total_quantity);
                     hasGrams = true;
                 } else if (unitLower === 'pcs' || unitLower === 'pc' || unitLower === 'piece' || unitLower === 'pieces') {
-                    pcsCount += parseInt(purchase.total_quantity);
+                    pcsCount += parseFloat(purchase.total_quantity);
                     hasPcs = true;
                 }
                 
@@ -663,25 +769,25 @@ if ($conn->multi_query($query)) {
             // Create a formatted total quantity string
             let totalQuantityString = "";
             if (hasKg) {
-                totalQuantityString += kgCount + " KG";
+                totalQuantityString += kgCount.toFixed(2) + " KG";
             }
             if ((hasKg && hasGrams) || (hasKg && hasPcs)) {
                 totalQuantityString += " + ";
             }
             if (hasGrams) {
-                totalQuantityString += gramsCount + " g";
+                totalQuantityString += gramsCount.toFixed(2) + " g";
             }
             if ((hasGrams && hasPcs) && (hasKg || hasGrams)) {
                 totalQuantityString += " + ";
             }
             if (hasPcs) {
-                totalQuantityString += pcsCount + " pcs";
+                totalQuantityString += pcsCount.toFixed(2) + " pcs";
             }
             if (!totalQuantityString) {
                 totalQuantityString = "0"; // Fallback if no quantities
             }
             
-            // Create table rows - also updating the fallback to use PHP instead of ₱
+            // Create table rows
             let purchaseRows = '';
             currentCustomerData.forEach(purchase => {
                 purchaseRows += `
@@ -718,6 +824,7 @@ if ($conn->multi_query($query)) {
                 <body>
                     <h1>E-MEAT Purchase Report</h1>
                     <p class="report-date">Generated on: ${new Date().toLocaleString()}</p>
+                    <p class="report-date">Period: <?= date('F d, Y', strtotime($start_date)) ?> to <?= date('F d, Y', strtotime($end_date)) ?></p>
                     
                     <h2>Customer: ${currentCustomerName}</h2>
                     <table>
@@ -743,7 +850,7 @@ if ($conn->multi_query($query)) {
                         </tbody>
                     </table>
                     
-                    <p class="note">This report shows all purchases made by ${currentCustomerName}. All amounts are in Philippine Peso (PHP).</p>
+                    <p class="note">This report shows all purchases made by ${currentCustomerName} between <?= date('F d, Y', strtotime($start_date)) ?> and <?= date('F d, Y', strtotime($end_date)) ?>. All amounts are in Philippine Peso (PHP).</p>
                 </body>
                 </html>
             `);

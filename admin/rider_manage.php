@@ -1,5 +1,4 @@
 <?php
-
 session_start(); // Start the session
 
 // To match what login.php is setting:
@@ -72,20 +71,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['rider_id']) && $_POST['rider_id'] > 0) {
             // Update existing rider using stored procedure
             $rider_id = intval($_POST['rider_id']);
-            $stmt = $conn->prepare("CALL UpdateRider(?, ?, ?, @success, @message)");
-            $stmt->bind_param("iss", $rider_id, $rider_name, $contact);
-            $stmt->execute();
             
-            // Get results
-            $result = $conn->query("SELECT @success AS success, @message AS message");
-            $row = $result->fetch_assoc();
+            // First check if any changes were made by comparing with current data
+            $check_stmt = $conn->prepare("CALL GetRiderById(?)");
+            $check_stmt->bind_param("i", $rider_id);
+            $check_stmt->execute();
+            $current_rider = $check_stmt->get_result()->fetch_assoc();
+            $check_stmt->close();
             
-            if ($row['success']) {
-                $successMessage = $row['message'];
-            } else {
-                $errorMessage = $row['message'];
+            // Clear any result sets
+            while ($conn->more_results()) {
+                $conn->next_result();
             }
-            $stmt->close();
+            
+            // Compare current data with form data
+            if ($current_rider && 
+                $current_rider['rider_name'] === $rider_name && 
+                $current_rider['contact'] === $contact) {
+                
+                // No changes were made, set message
+                $successMessage = "No changes made";
+                
+                // Add JavaScript to redirect back to the main page if editing
+                if (isset($_GET['edit'])) {
+                    echo "<script>
+                        setTimeout(function() {
+                            window.location.href = 'rider_manage.php';
+                        }, 1500);
+                    </script>";
+                }
+            } else {
+                // Changes detected, proceed with update
+                $stmt = $conn->prepare("CALL UpdateRider(?, ?, ?, @success, @message)");
+                $stmt->bind_param("iss", $rider_id, $rider_name, $contact);
+                $stmt->execute();
+                
+                // Get results
+                $result = $conn->query("SELECT @success AS success, @message AS message");
+                $row = $result->fetch_assoc();
+                
+                if ($row['success']) {
+                    $successMessage = $row['message'];
+                } else {
+                    $errorMessage = $row['message'];
+                }
+                $stmt->close();
+            }
         } else {
             // Add new rider using stored procedure
             $stmt = $conn->prepare("CALL AddRider(?, ?, @success, @message, @new_id)");
@@ -207,15 +238,15 @@ $stmt->close();
             <script>
             <?php if ($successMessage): ?>
                 Swal.fire({
-                    title: "Success!",
+                    title: <?= $successMessage === "No changes made" ? "'Information'" : "'Success!'" ?>,
                     text: "<?= $successMessage ?>",
-                    icon: "success",
+                    icon: <?= $successMessage === "No changes made" ? "'info'" : "'success'" ?>,
                     position: 'top-end',
                     toast: true,
                     showConfirmButton: false,
                     timer: 3000,
                     timerProgressBar: true,
-                    background: '#10b981',
+                    background: <?= $successMessage === "No changes made" ? "'#6B7280'" : "'#10b981'" ?>,  // Gray for no changes, green for success
                     color: '#ffffff'
                 });
             <?php endif; ?>

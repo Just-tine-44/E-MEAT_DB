@@ -1,6 +1,7 @@
 <?php
+// filepath: c:\xampp\htdocs\website\admin\edit_product.php
 $page_title = "Edit Product | E-MEAT Admin";
-include('includes/header.php');
+include('new_include/sidebar.php');
 include '../connection/config.php'; // Database connection
 
 // Check if the product ID is provided in the URL
@@ -36,26 +37,56 @@ try {
 
     // Handle form submission
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $new_qty_available = $_POST['qty_available'];
         $new_unit_price = $_POST['unit_price'];
+        $additional_stock = isset($_POST['additional_stock']) ? floatval($_POST['additional_stock']) : 0;
         
-        // Update quantity and price using existing stored procedure
+        // Update product details
         $update_success = false;
+        $message = "";
         
-        // Update quantity and price
-        $update_stmt = $conn->prepare("CALL Update_MEAT_PART(?, ?, ?)");
-        $update_stmt->bind_param("iid", $meat_part_id, $new_qty_available, $new_unit_price);
-        
-        if ($update_stmt->execute()) {
-            $update_success = true;
+        if ($additional_stock > 0) {
+            // Use Add_Stock_To_MEAT_PART procedure if additional stock is provided
+            $update_stmt = $conn->prepare("CALL Add_Stock_To_MEAT_PART(?, ?, ?)");
+            $update_stmt->bind_param("idd", $meat_part_id, $additional_stock, $new_unit_price);
+            
+            if ($update_stmt->execute()) {
+                $update_success = true;
+                $message = "Stock added and price updated successfully!";
+            } else {
+                $message = "Failed to update product details: {$update_stmt->error}";
+            }
         } else {
-            echo "<script>alert('Failed to update product details: {$update_stmt->error}');</script>";
+            // Just update the price if no additional stock using the enhanced procedure
+            $update_stmt = $conn->prepare("CALL Update_MEAT_PART_Price(?, ?)");
+            $update_stmt->bind_param("id", $meat_part_id, $new_unit_price);
+            
+            if ($update_stmt->execute()) {
+                $result = $update_stmt->get_result();
+                if ($result) {
+                    $row = $result->fetch_assoc();
+                    if (isset($row['success'])) {
+                        $update_success = (bool)$row['success'];
+                        $message = $row['message'];
+                    } else {
+                        $update_success = true;
+                        $message = "Product updated successfully!";
+                    }
+                } else {
+                    $update_success = true;
+                    $message = "Product updated successfully!";
+                }
+            } else {
+                $message = "Failed to update product details: {$update_stmt->error}";
+            }
         }
+        
         $update_stmt->close();
         $conn->next_result();
         
         if ($update_success) {
-            echo "<script>alert('Product updated successfully!'); window.location.href = 'product_list.php';</script>";
+            echo "<script>alert('{$message}'); window.location.href = 'product_list.php';</script>";
+        } else {
+            echo "<script>alert('{$message}');</script>";
         }
     }
 } catch (Exception $e) {
@@ -74,6 +105,8 @@ try {
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         
@@ -111,52 +144,68 @@ try {
                     
                     <form method="POST" onsubmit="return validateForm()">
                         <div class="p-6 space-y-6">
-                            <!-- Quantity Available -->
+                            <!-- Current Quantity Available (Read Only) -->
                             <div class="space-y-2">
-                                <label for="qty_available" class="block text-sm font-medium text-gray-700">
-                                    Quantity Available
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Current Quantity Available (Read Only)
                                 </label>
                                 <div class="flex items-center">
                                     <div class="relative flex-1">
                                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <i class="fas fa-cubes text-gray-400"></i>
                                         </div>
-                                        <input type="number" id="qty_available" name="qty_available" 
-                                            value="<?= htmlspecialchars($product['QTY_AVAILABLE']) ?>"
-                                            min="75" max="400" 
-                                            placeholder="75-400"
-                                            class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" 
-                                            required oninput="checkQty()">
+                                        <input type="text" value="<?= htmlspecialchars($product['QTY_AVAILABLE']) ?> <?= htmlspecialchars($product['UNIT_OF_MEASURE']) ?>"
+                                            class="block w-full pl-10 py-3 border border-gray-200 bg-gray-100 rounded-lg shadow-sm text-gray-700" 
+                                            readonly>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500">
+                                    Last updated: <?= isset($product['LAST_UPDATED']) ? date('M j, Y g:i A', strtotime($product['LAST_UPDATED'])) : 'Not available' ?>
+                                </p>
+                                
+                                <!-- Range Indicator -->
+                                <div class="mt-2">
+                                    <div class="flex justify-between text-xs text-gray-500">
+                                        <span>Min: 0</span>
+                                        <span>Max: 400</span>
+                                    </div>
+                                    <div class="h-2 bg-gray-200 rounded mt-1 overflow-hidden">
+                                        <div id="qty-range-indicator" class="h-full transition-all duration-300" 
+                                            style="width: <?= min(100, max(0, ($product['QTY_AVAILABLE'] / 400) * 100)) ?>%; 
+                                                  background-color: <?= $product['QTY_AVAILABLE'] < 10 ? '#ef4444' : ($product['QTY_AVAILABLE'] < 75 ? '#f59e0b' : '#22c55e') ?>;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Add New Stock Section -->
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <label for="additional_stock" class="block text-sm font-medium text-gray-700">
+                                    Add Additional Stock
+                                </label>
+                                <div class="flex items-center mt-2">
+                                    <div class="relative flex-1">
+                                        <input type="number" id="additional_stock" name="additional_stock" 
+                                            placeholder="Enter amount to add"
+                                            min="0" max="100" step="0.1"
+                                            class="block w-full pl-3 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                             <span class="text-gray-500 font-medium">
                                                 <?= htmlspecialchars($product['UNIT_OF_MEASURE']) ?>
                                             </span>
                                         </div>
                                     </div>
+                                    <button type="button" id="add-stock-btn" class="ml-3 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                        <i class="fas fa-plus mr-1"></i> Add
+                                    </button>
                                 </div>
-                                <p id="qty-error" class="mt-1 text-sm text-red-600 hidden">
-                                    Quantity must be between 75 and 400.
-                                </p>
-                                
-                                <!-- Range Indicator -->
-                                <div class="mt-2">
-                                    <div class="flex justify-between text-xs text-gray-500">
-                                        <span>Min: 75</span>
-                                        <span>Max: 400</span>
-                                    </div>
-                                    <div class="h-2 bg-gray-200 rounded mt-1 overflow-hidden">
-                                        <div id="qty-range-indicator" class="h-full bg-green-500 transition-all duration-300" 
-                                            style="width: <?= min(100, max(0, (($product['QTY_AVAILABLE'] - 75) / (400 - 75)) * 100)) ?>%"></div>
-                                    </div>
-                                </div>
-                                
                                 <p class="text-xs text-gray-500 mt-1">
-                                    Current inventory level that customers can purchase
+                                    Enter the quantity of new stock to add to current inventory
                                 </p>
                             </div>
                             
                             <!-- Unit Price -->
-                            <div class="space-y-2">
+                            <div class="space-y-2 mt-4 pt-4 border-t border-gray-200">
                                 <label for="unit_price" class="block text-sm font-medium text-gray-700">
                                     Unit Price
                                 </label>
@@ -206,11 +255,14 @@ try {
                                 <i class="fas fa-arrow-left"></i>
                                 <span>Cancel</span>
                             </a>
-                            <button type="submit" class="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 font-medium flex items-center gap-2 transition-colors shadow-sm">
+                            <button type="submit" id="submit-form" class="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 font-medium flex items-center gap-2 transition-colors shadow-sm">
                                 <i class="fas fa-check"></i>
                                 <span>Save Changes</span>
                             </button>
                         </div>
+                        
+                        <!-- Hidden field for additional stock -->
+                        <input type="hidden" id="additional_stock_hidden" name="additional_stock" value="0">
                     </form>
                 </div>
             </div>
@@ -267,6 +319,19 @@ try {
                             </div>
                         </div>
                         
+                        <!-- Last Updated Information -->
+                        <div class="border-t border-gray-100 pt-4">
+                            <div class="text-sm text-gray-500 mb-2">Last Stock Update</div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-700">
+                                    <?= isset($product['LAST_UPDATED']) ? date('M j, Y', strtotime($product['LAST_UPDATED'])) : 'Not available' ?>
+                                </span>
+                                <span class="text-xs text-gray-500">
+                                    <?= isset($product['LAST_UPDATED']) ? date('g:i A', strtotime($product['LAST_UPDATED'])) : '' ?>
+                                </span>
+                            </div>
+                        </div>
+                        
                         <!-- Additional Info -->
                         <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
                             <div class="text-sm font-medium text-gray-700 mb-3">Product ID: #<?= $meat_part_id ?></div>
@@ -277,7 +342,7 @@ try {
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <i class="fas fa-balance-scale w-4 text-center text-gray-400"></i>
-                                    <span>Sold by <?= htmlspecialchars($product['UNIT_OF_MEASURE']) ?> and grams</span>
+                                    <span>Sold by <?= htmlspecialchars($product['UNIT_OF_MEASURE']) ?></span>
                                 </div>
                             </div>
                         </div>
@@ -288,26 +353,16 @@ try {
     </div>
 
     <script>
-        // Validation functions
-        function checkQty() {
-            const qty = document.getElementById('qty_available').value;
-            const error = document.getElementById('qty-error');
-            
-            if (qty <= 0 || qty === '' || qty === '-0') {
-                error.classList.remove('hidden');
-                return false;
-            } else {
-                error.classList.add('hidden');
-                return true;
-            }
-        }
+        // Store original price for comparison
+        const originalPrice = parseFloat('<?= $product["UNIT_PRICE"] ?>');
         
+        // Validation functions
         function checkPrice() {
             const price = parseFloat(document.getElementById('unit_price').value);
             const error = document.getElementById('price-error');
             const input = document.getElementById('unit_price');
-            const minPrice = 50; // Suggested minimum price (adjust as needed)
-            const maxPrice = 1000; // Suggested maximum price (adjust as needed)
+            const minPrice = 50; // Suggested minimum price
+            const maxPrice = 1000; // Suggested maximum price
             
             if (isNaN(price) || price < minPrice || price > maxPrice) {
                 error.textContent = `Price must be between ₱${minPrice} and ₱${maxPrice}.`;
@@ -350,54 +405,77 @@ try {
         }
         
         function validateForm() {
-            const qtyValid = checkQty();
-            const priceValid = checkPrice();
-            return qtyValid && priceValid;
-        }
-
-        function checkQty() {
-            const qty = parseInt(document.getElementById('qty_available').value);
-            const error = document.getElementById('qty-error');
-            const input = document.getElementById('qty_available');
-            const indicator = document.getElementById('qty-range-indicator');
+            // Check if there are any changes before submitting
+            const newPrice = parseFloat(document.getElementById('unit_price').value);
+            const additionalStock = parseFloat(document.getElementById('additional_stock_hidden').value) || 0;
             
-            if (isNaN(qty) || qty < 75 || qty > 400) {
-                error.classList.remove('hidden');
-                input.classList.add('border-red-500');
-                
-                // Update indicator
-                if (indicator) {
-                    indicator.style.width = '0%';
-                    indicator.style.backgroundColor = '#ef4444'; // red
-                }
-                
+            // If no price change and no stock addition, prevent submission
+            if (Math.abs(newPrice - originalPrice) < 0.01 && additionalStock === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'No Changes',
+                    text: 'You haven\'t made any changes to the product.',
+                    confirmButtonColor: '#3085d6'
+                });
                 return false;
-            } else {
-                error.classList.add('hidden');
-                input.classList.remove('border-red-500');
-                
-                // Update indicator
-                if (indicator) {
-                    const percentage = ((qty - 75) / (400 - 75)) * 100;
-                    indicator.style.width = percentage + '%';
-                    
-                    // Change color based on value
-                    if (percentage < 25) {
-                        indicator.style.backgroundColor = '#eab308'; // yellow
-                    } else if (percentage > 75) {
-                        indicator.style.backgroundColor = '#f97316'; // orange
-                    } else {
-                        indicator.style.backgroundColor = '#22c55e'; // green
-                    }
-                }
-                
-                return true;
             }
+            
+            return checkPrice();
         }
 
-        // Initialize range indicator on page load
+        // Add stock button handler
         document.addEventListener('DOMContentLoaded', function() {
-            checkQty();
+            const addStockBtn = document.getElementById('add-stock-btn');
+            if (addStockBtn) {
+                addStockBtn.addEventListener('click', function() {
+                    const additionalStock = document.getElementById('additional_stock');
+                    const value = parseFloat(additionalStock.value);
+                    
+                    if (isNaN(value) || value <= 0) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Amount',
+                            text: 'Please enter a valid quantity to add',
+                            confirmButtonColor: '#EF4444'
+                        });
+                        return;
+                    }
+                    
+                    // Get the current quantity and calculate new total
+                    const currentQty = parseFloat('<?= $product["QTY_AVAILABLE"] ?>');
+                    const newQty = currentQty + value;
+                    
+                    // Show confirmation dialog
+                    Swal.fire({
+                        icon: 'question',
+                        title: 'Confirm Stock Addition',
+                        html: `Are you sure you want to add <b>${value} <?= $product["UNIT_OF_MEASURE"] ?></b> to current stock?<br>` +
+                              `New total will be <b>${newQty.toFixed(2)} <?= $product["UNIT_OF_MEASURE"] ?></b>`,
+                        showCancelButton: true,
+                        confirmButtonColor: '#10B981',
+                        cancelButtonColor: '#6B7280',
+                        confirmButtonText: 'Yes, Add Stock',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Update the hidden input and submit the form
+                            document.getElementById('additional_stock_hidden').value = value;
+                            
+                            // Check if price is valid before submitting
+                            if (checkPrice()) {
+                                document.getElementById('submit-form').click();
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Invalid Price',
+                                    text: 'Please correct the unit price before adding stock.',
+                                    confirmButtonColor: '#EF4444'
+                                });
+                            }
+                        }
+                    });
+                });
+            }
         });
     </script>
 </body>

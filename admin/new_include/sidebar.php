@@ -10,7 +10,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <aside class="fixed inset-y-0 left-0 z-20 flex flex-col w-64 h-full overflow-y-auto text-gray-700 bg-white border-r border-gray-100 shadow-sm transition-all">
         <!-- Logo Section -->
         <div class="flex items-center justify-between px-4 pt-4 pb-2">
-            <a href="index.php" class="flex items-center space-x-2">
+            <a href="#" class="flex items-center space-x-2">
                 <div class="flex items-center justify-center w-9 h-9 rounded-full bg-red-600">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="white" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />

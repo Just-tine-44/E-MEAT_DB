@@ -187,7 +187,7 @@ $conn->next_result();
                             $image_path = '../website/IMAGES/default-meat.jpg';
                         }
                         ?>
-                        <div class="product-item <?php echo strtolower($row['category']); ?>">
+                        <div class="product-item <?php echo strtolower($row['category']); ?>" data-product-id="<?php echo $row['MEAT_PART_ID']; ?>">
                             <div class="product-image">
                                 <img src="<?php echo $image_path; ?>" alt="<?php echo htmlspecialchars($row['MEAT_PART_NAME']); ?>">
                             </div>
@@ -396,6 +396,9 @@ $conn->next_result();
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // Check for disabled products first and apply visual effects
+    checkDisabledProducts();
+    
     // Remove any existing event listeners
     const addToCartButtons = document.querySelectorAll(".add-to-cart");
     
@@ -409,6 +412,20 @@ document.addEventListener("DOMContentLoaded", function () {
             e.preventDefault();
             const productItem = this.closest(".product-item");
             const meatPartId = this.getAttribute("data-id");
+            
+            // Check if product is disabled before proceeding
+            const disabledProducts = JSON.parse(localStorage.getItem('disabledProducts') || '{}');
+            if (disabledProducts[meatPartId]) {
+                Swal.fire({
+                    title: 'Product Unavailable',
+                    text: "This product is currently unavailable for purchase.",
+                    icon: 'info',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
             const qtyInput = productItem.querySelector(".quantity");
             const unitSelect = productItem.querySelector(".unit");
             const availableStock = parseFloat(qtyInput.getAttribute("max"));
@@ -552,5 +569,61 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     });
+    
+    // Function to check for disabled products and apply visual effects
+    function checkDisabledProducts() {
+        // Get disabled products from localStorage
+        const disabledProducts = JSON.parse(localStorage.getItem('disabledProducts') || '{}');
+        
+        // Loop through all products on the page
+        document.querySelectorAll('.product-item').forEach(product => {
+            const productId = product.getAttribute('data-product-id');
+            
+            // If this product is in the disabled list
+            if (disabledProducts[productId]) {
+                // Get elements to modify
+                const addToCartBtn = product.querySelector('.add-to-cart');
+                const productImage = product.querySelector('.product-image img');
+                const productInfo = product.querySelector('.product-info');
+                
+                // Disable the add to cart button
+                if (addToCartBtn) {
+                    addToCartBtn.disabled = true;
+                    addToCartBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+                    addToCartBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    addToCartBtn.innerHTML = '<i class="ri-ban-line"></i> Unavailable';
+                }
+                
+                // Add a disabled badge if it doesn't exist yet
+                if (productInfo && !productInfo.querySelector('.disabled-badge')) {
+                    const disabledBadge = document.createElement('div');
+                    disabledBadge.className = 'disabled-badge bg-gray-200 text-gray-700 py-1 px-3 rounded-full text-xs font-bold mb-3';
+                    disabledBadge.textContent = 'Currently Unavailable';
+                    productInfo.insertBefore(disabledBadge, productInfo.firstChild);
+                }
+                
+                // Dim the product image
+                if (productImage) {
+                    productImage.classList.add('opacity-50');
+                }
+                
+                // Add a grayed out effect to the whole product item
+                product.classList.add('opacity-75');
+                
+                // Disable quantity input
+                const qtyInput = product.querySelector('.quantity');
+                if (qtyInput) {
+                    qtyInput.disabled = true;
+                    qtyInput.placeholder = "Unavailable";
+                }
+                
+                // Disable unit select
+                const unitSelect = product.querySelector('.unit');
+                if (unitSelect) {
+                    unitSelect.disabled = true;
+                }
+            }
+        });
+    }
 });
 </script>

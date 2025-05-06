@@ -726,8 +726,27 @@ $conn->next_result(); // Move to the next result set, if any
         </div>
     </div>
     
-<script>
+    <script>
+    // Define the initializeStatusOptions function outside of document ready
+    function initializeStatusOptions() {
+        $('.status-select').each(function() {
+            const currentStatusId = parseInt($(this).data('original-status'));
+            const options = $(this).find('option');
+            
+            options.each(function() {
+                const optionValue = parseInt($(this).val());
+                // Disable options that are more than one step ahead or any previous status
+                if (optionValue < currentStatusId || optionValue > currentStatusId + 1) {
+                    $(this).prop('disabled', true);
+                }
+            });
+        });
+    }
+
     $(document).ready(function() {
+        // Call the initialization function when page loads
+        initializeStatusOptions();
+        
         // Initially hide rider assignment for pending orders
         $('.order-row').each(function() {
             var statusId = $(this).data('status');
@@ -738,11 +757,32 @@ $conn->next_result(); // Move to the next result set, if any
             }
         });
         
-        // Status change handler - only to show/hide rider form
+        // Status change handler with validation
         $('.status-select').on('change', function() {
             var currentStatusId = parseInt($(this).val());
             var originalStatusId = parseInt($(this).data('original-status'));
             var orderRow = $(this).closest('.order-row');
+            
+            // Prevent selecting previous status or skipping ahead
+            if (currentStatusId < originalStatusId || currentStatusId > originalStatusId + 1) {
+                // Reset to the original value
+                $(this).val(originalStatusId);
+                
+                Swal.fire({
+                    title: "Invalid Status Change",
+                    text: "You can only progress to the next status in sequence",
+                    icon: "warning",
+                    position: 'top-end',
+                    toast: true,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    background: '#f97316',
+                    color: '#ffffff'
+                });
+                
+                return;
+            }
             
             // Show rider assignment ONLY when status is "Processing" (ID 2)
             if (currentStatusId == 2) {
@@ -829,16 +869,57 @@ $conn->next_result(); // Move to the next result set, if any
             }
         });
         
-        // Use regular confirmation for status update
+        // Use regular confirmation for status update with validation
         $('.status-form').on('submit', function(e) {
             var form = $(this);
             var currentStatusId = parseInt(form.find('select').val());
+            var originalStatusId = parseInt(form.find('select').data('original-status'));
             var currentStatus = form.find('select option:selected').text();
             var orderId = form.find('input[name="order_id"]').val();
             
             // If button is already disabled, prevent submission
             if (form.find('button[name="update_status"]').prop('disabled')) {
                 e.preventDefault();
+                return false;
+            }
+            
+            // Prevent selecting previous status
+            if (currentStatusId < originalStatusId) {
+                e.preventDefault();
+                
+                Swal.fire({
+                    title: "Invalid Status Change",
+                    text: "You cannot revert to a previous status",
+                    icon: "error",
+                    position: 'top-end',
+                    toast: true,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    background: '#ef4444',
+                    color: '#ffffff'
+                });
+                
+                return false;
+            }
+            
+            // Prevent skipping statuses
+            if (currentStatusId > originalStatusId + 1) {
+                e.preventDefault();
+                
+                Swal.fire({
+                    title: "Invalid Status Change",
+                    text: "You cannot skip status steps",
+                    icon: "error",
+                    position: 'top-end',
+                    toast: true,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    background: '#ef4444',
+                    color: '#ffffff'
+                });
+                
                 return false;
             }
             

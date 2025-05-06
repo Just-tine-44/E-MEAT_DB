@@ -289,22 +289,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <!-- Quantity Available -->
                                 <div>
-                                    <label for="qty_available" class="block text-sm font-medium text-gray-700 mb-2">Quantity Available</label>
+                                    <label for="qty_available" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Quantity Available <span id="qty-limits-text" class="text-xs font-normal text-gray-500">(Select a category)</span>
+                                    </label>
                                     <div class="relative">
                                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <i class="fas fa-cubes text-gray-400"></i>
                                         </div>
-                                        <input type="number" name="qty_available" id="qty_available" required min="75" max="400"
-                                            placeholder="75-400" oninput="checkQty()"
+                                        <input type="number" name="qty_available" id="qty_available" required
+                                            placeholder="Enter quantity" oninput="checkQty()"
                                             class="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
                                     </div>
-                                    <p id="qty-error" class="mt-1 text-sm text-red-600 hidden">Quantity must be between 75 and 400.</p>
+                                    <p id="qty-error" class="mt-1 text-sm text-red-600 hidden">Please select a category first.</p>
                                     
                                     <!-- Range Indicator -->
                                     <div class="mt-2">
                                         <div class="flex justify-between text-xs text-gray-500">
-                                            <span>Min: 75</span>
-                                            <span>Max: 400</span>
+                                            <span id="qty-min">Min: Select category</span>
+                                            <span id="qty-max">Max: Select category</span>
                                         </div>
                                         <div class="h-2 bg-gray-200 rounded mt-1 overflow-hidden">
                                             <div id="qty-range-indicator" class="h-full bg-green-500" style="width: 0%"></div>
@@ -402,6 +404,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                         
+                        <div class="mt-6 p-4 rounded-lg border border-yellow-200 bg-yellow-50">
+                            <div class="flex items-start space-x-3">
+                                <div class="flex-shrink-0 text-yellow-500">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-medium text-yellow-800">Quantity Guidelines</h4>
+                                    <ul class="mt-2 space-y-1 text-xs text-yellow-700">
+                                        <li><strong>Beef:</strong> 75-400 kg</li>
+                                        <li><strong>Pork:</strong> 60-300 kg</li>
+                                        <li><strong>Chicken:</strong> 50-200 kg</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="mt-6 bg-blue-50 rounded-lg p-4">
                             <div class="flex items-start space-x-3">
                                 <div class="flex-shrink-0 text-blue-500">
@@ -443,14 +461,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         function checkQty() {
             var qty = document.getElementById('qty_available').value;
+            var categoryId = document.getElementById('meat_category').value;
             var error = document.getElementById('qty-error');
             var input = document.getElementById('qty_available');
             var indicator = document.getElementById('qty-range-indicator');
+            var qtyLimitsText = document.getElementById('qty-limits-text');
             
-            // Parse as integer
-            qty = parseInt(qty);
+            // Set category-specific limits
+            var minQty, maxQty;
             
-            if (isNaN(qty) || qty < 75 || qty > 400) {
+            if (!categoryId) {
+                error.textContent = "Please select a meat category first.";
+                error.classList.remove('hidden');
+                input.classList.add('border-red-500');
+                indicator.style.width = '0%';
+                return false;
+            }
+            
+            switch(categoryId) {
+                case "1": // Beef
+                    minQty = 75;
+                    maxQty = 400;
+                    qtyLimitsText.textContent = "(Beef: 75-400 kg)";
+                    break;
+                case "2": // Pork
+                    minQty = 60;
+                    maxQty = 300;
+                    qtyLimitsText.textContent = "(Pork: 60-300 kg)";
+                    break;
+                case "3": // Chicken
+                    minQty = 50;
+                    maxQty = 200;
+                    qtyLimitsText.textContent = "(Chicken: 50-200 kg)";
+                    break;
+                default:
+                    minQty = 50;
+                    maxQty = 400;
+                    qtyLimitsText.textContent = "(Select a category)";
+                    break;
+            }
+            
+            // Update placeholder and input properties based on selected category
+            input.setAttribute('min', minQty);
+            input.setAttribute('max', maxQty);
+            input.setAttribute('placeholder', `${minQty}-${maxQty} kg`);
+            
+            // Update min/max indicators
+            document.getElementById('qty-min').textContent = `Min: ${minQty} kg`;
+            document.getElementById('qty-max').textContent = `Max: ${maxQty} kg`;
+            
+            // Parse as number
+            qty = parseFloat(qty);
+            
+            if (isNaN(qty) || qty < minQty || qty > maxQty) {
+                error.textContent = `Quantity must be between ${minQty} and ${maxQty} kg for this meat category.`;
                 error.classList.remove('hidden');
                 input.classList.add('border-red-500');
                 
@@ -464,7 +528,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 input.classList.remove('border-red-500');
                 
                 // Update indicator - show position in range
-                const percentage = ((qty - 75) / (400 - 75)) * 100;
+                const percentage = ((qty - minQty) / (maxQty - minQty)) * 100;
                 indicator.style.width = percentage + '%';
                 
                 // Change color based on value (optional)
@@ -495,11 +559,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function validateQty() {
             var qtyValid = checkQty();
             var priceValid = checkPrice();
-            if (qtyValid && priceValid) {
-                return true;
-            } else {
-                return false;
+            if (!qtyValid) {
+                // Scroll to the qty field for better UX
+                document.getElementById('qty_available').scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+            return qtyValid && priceValid;
         }
         
         // Close modal function
@@ -512,14 +576,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }, 300);
             }
         }
-        
-        // Show modal on page load if it exists
-        document.addEventListener('DOMContentLoaded', function() {
-            const successModal = document.getElementById('successModal');
-            if (successModal) {
-                successModal.style.display = 'flex';
-            }
-        });
         
         // Meat parts data organized by category ID
         const meatParts = {
@@ -556,6 +612,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (successModal) {
                 successModal.style.display = 'flex';
             }
+            
+            // Disable the quantity field until a category is selected
+            document.getElementById('qty_available').disabled = true;
+            document.getElementById('qty_available').placeholder = "Select a category first";
         });
         
         // Update meat part dropdown options when meat category changes
@@ -563,6 +623,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const categoryId = this.value;
             const meatPartDropdown = document.getElementById('meat_part_name');
             const container = document.getElementById('meat_part_container');
+            
+            // Enable the quantity field now that a category is selected
+            document.getElementById('qty_available').disabled = false;
+            
+            // Call function to update quantity limits
+            checkQty();
             
             // Remove any custom input if it exists
             const customInput = document.getElementById('meat_part_name_custom');

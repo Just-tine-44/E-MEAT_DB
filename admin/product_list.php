@@ -155,6 +155,7 @@ try {
                                     <th class="py-3 px-4 text-center">Stock</th>
                                     <th class="py-3 px-4 text-center">Unit</th>
                                     <th class="py-3 px-4 text-right">Price</th>
+                                    <th class="py-3 px-4 text-center">Status</th>
                                     <th class="py-3 px-4 text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -177,15 +178,17 @@ try {
                                             $stockText = 'In Stock';
                                         }
                                 ?>
-                                    <tr class="table-row border-b border-gray-200 hover:bg-gray-50 transition-all" data-category="<?= $row['MEAT_CATEGORY_ID'] ?>">
+                                    <tr class="table-row border-b border-gray-200 hover:bg-gray-50 transition-all" 
+                                        data-category="<?= $row['MEAT_CATEGORY_ID'] ?>"
+                                        data-product-id="<?= $row['MEAT_PART_ID'] ?>">
                                         <td class="py-3 px-4 flex items-center">
-                                            <div class="flex-shrink-0 h-16 w-16 rounded-md overflow-hidden bg-gray-100 mr-4">
+                                            <div class="flex-shrink-0 h-16 w-16 rounded-md overflow-hidden bg-gray-100 mr-4 product-image">
                                                 <img class="h-full w-full object-cover" 
                                                     src="../website/IMAGES/MEATS/<?= $row['MEAT_PART_PHOTO'] ?>" 
                                                     alt="<?= $row['MEAT_PART_NAME'] ?>">
                                             </div>
                                             <div>
-                                                <p class="font-medium text-gray-800"><?= $row['MEAT_PART_NAME'] ?></p>
+                                                <p class="font-medium text-gray-800 product-name"><?= $row['MEAT_PART_NAME'] ?></p>
                                             </div>
                                         </td>
                                         <td class="py-3 px-4">
@@ -206,10 +209,22 @@ try {
                                             ₱<?= number_format($row['UNIT_PRICE'], 2) ?>
                                         </td>
                                         <td class="py-3 px-4 text-center">
-                                            <a href="edit_product.php?id=<?= $row['MEAT_PART_ID'] ?>" 
-                                            class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded flex items-center justify-center gap-1 mx-auto w-24 transition-all">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </a>
+                                            <span class="status-badge bg-green-100 text-green-800 py-1 px-3 rounded-full text-xs font-medium">
+                                                Enabled
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <div class="flex flex-col gap-2">
+                                                <a href="edit_product.php?id=<?= $row['MEAT_PART_ID'] ?>" 
+                                                class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded flex items-center justify-center gap-1 mx-auto w-24 transition-all">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                
+                                                <!-- Toggle Button -->
+                                                <button class="toggle-status bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded flex items-center justify-center gap-1 mx-auto w-24 transition-all">
+                                                    <i class="fas fa-ban"></i> Disable
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php 
@@ -217,7 +232,7 @@ try {
                                 } else {
                                 ?>
                                     <tr>
-                                        <td colspan="6" class="py-8 text-center">
+                                        <td colspan="7" class="py-8 text-center">
                                             <div class="flex flex-col items-center justify-center">
                                                 <i class="fas fa-box-open text-gray-300 text-5xl mb-4"></i>
                                                 <p class="text-gray-500">No products found</p>
@@ -245,7 +260,7 @@ try {
             const rows = document.querySelectorAll('tbody tr');
             
             rows.forEach(row => {
-                const productName = row.querySelector('.font-medium')?.textContent.toLowerCase() || '';
+                const productName = row.querySelector('.product-name')?.textContent.toLowerCase() || '';
                 const categoryElement = row.querySelector('.bg-red-50');
                 const category = categoryElement ? categoryElement.textContent.toLowerCase() : '';
                 
@@ -282,6 +297,113 @@ try {
                     }
                 });
             });
+        });
+
+        // Enable/Disable Product Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all toggle buttons
+            const toggleButtons = document.querySelectorAll('.toggle-status');
+            
+            // Add click event to each button
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Get the product row
+                    const row = this.closest('tr');
+                    const productId = row.getAttribute('data-product-id');
+                    const productName = row.querySelector('.product-name').textContent;
+                    const imageContainer = row.querySelector('.product-image');
+                    const statusBadge = row.querySelector('.status-badge');
+                    
+                    // Check current status
+                    const isEnabled = statusBadge.classList.contains('bg-green-100');
+                    
+                    // Confirm before toggling
+                    if (!confirm(`Are you sure you want to ${isEnabled ? 'disable' : 'enable'} "${productName}"?`)) {
+                        return;
+                    }
+                    
+                    // Toggle the status
+                    if (isEnabled) {
+                        // Disable the product
+                        statusBadge.classList.remove('bg-green-100', 'text-green-800');
+                        statusBadge.classList.add('bg-gray-100', 'text-gray-800');
+                        statusBadge.textContent = 'Disabled';
+                        
+                        // Change button style
+                        this.classList.remove('bg-red-500', 'hover:bg-red-600');
+                        this.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                        this.innerHTML = '<i class="fas fa-check"></i> Enable';
+                        
+                        // Add visual indication that product is disabled
+                        imageContainer.classList.add('opacity-50');
+                        row.querySelector('.product-name').classList.add('text-gray-400');
+                        row.querySelector('.product-name').classList.remove('text-gray-800');
+                    } else {
+                        // Enable the product
+                        statusBadge.classList.remove('bg-gray-100', 'text-gray-800');
+                        statusBadge.classList.add('bg-green-100', 'text-green-800');
+                        statusBadge.textContent = 'Enabled';
+                        
+                        // Change button style
+                        this.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                        this.classList.add('bg-red-500', 'hover:bg-red-600');
+                        this.innerHTML = '<i class="fas fa-ban"></i> Disable';
+                        
+                        // Remove visual indication
+                        imageContainer.classList.remove('opacity-50');
+                        row.querySelector('.product-name').classList.remove('text-gray-400');
+                        row.querySelector('.product-name').classList.add('text-gray-800');
+                    }
+                    
+                    // Store the status in local storage so it persists between page loads
+                    const disabledProducts = JSON.parse(localStorage.getItem('disabledProducts') || '{}');
+                    
+                    if (isEnabled) {
+                        // Disable the product in storage
+                        disabledProducts[productId] = true;
+                    } else {
+                        // Enable the product in storage
+                        delete disabledProducts[productId];
+                    }
+                    
+                    localStorage.setItem('disabledProducts', JSON.stringify(disabledProducts));
+                    
+                    // Inform the user
+                    alert(`Product "${productName}" has been ${isEnabled ? 'disabled' : 'enabled'}.`);
+                });
+            });
+            
+            // Apply saved disabled states on page load
+            function applySavedStates() {
+                const disabledProducts = JSON.parse(localStorage.getItem('disabledProducts') || '{}');
+                
+                for (const productId in disabledProducts) {
+                    const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+                    if (row) {
+                        const toggleButton = row.querySelector('.toggle-status');
+                        const statusBadge = row.querySelector('.status-badge');
+                        const imageContainer = row.querySelector('.product-image');
+                        
+                        // Update badge
+                        statusBadge.classList.remove('bg-green-100', 'text-green-800');
+                        statusBadge.classList.add('bg-gray-100', 'text-gray-800');
+                        statusBadge.textContent = 'Disabled';
+                        
+                        // Update button
+                        toggleButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+                        toggleButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                        toggleButton.innerHTML = '<i class="fas fa-check"></i> Enable';
+                        
+                        // Update visual style
+                        imageContainer.classList.add('opacity-50');
+                        row.querySelector('.product-name').classList.add('text-gray-400');
+                        row.querySelector('.product-name').classList.remove('text-gray-800');
+                    }
+                }
+            }
+            
+            // Apply saved states when page loads
+            applySavedStates();
         });
     </script>
 </body>

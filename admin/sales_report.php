@@ -113,6 +113,45 @@ try {
 } catch (Exception $e) {
     error_log("Error in sales_report: " . $e->getMessage());
 }
+
+// Generate top products rows for print
+$topProductsRows = '';
+if (count($top_products) > 0) {
+    foreach ($top_products as $index => $product) {
+        $topProductsRows .= '<tr>
+            <td>'.($index + 1).'</td>
+            <td>'.htmlspecialchars($product['product_name']).'</td>
+            <td>'.number_format($product['quantity_sold']).' '.strtoupper($product['unit_measure']).'</td>
+            <td class="amount">'.formatCurrency($product['total_sales']).'</td>
+        </tr>';
+    }
+} else {
+    $topProductsRows = '<tr><td colspan="4" style="text-align: center;">No product data available</td></tr>';
+}
+
+// Generate customer purchases rows for print
+$customerPurchasesRows = '';
+if (count($customer_purchases) > 0) {
+    foreach ($customer_purchases as $customer) {
+        $customerPurchasesRows .= '<tr>
+            <td>'.htmlspecialchars($customer['customer_name']).'</td>
+            <td>'.$customer['email'].'</td>
+            <td>'.$customer['order_count'].'</td>
+            <td class="amount">'.formatCurrency($customer['total_spent']).'</td>
+        </tr>';
+    }
+} else {
+    $customerPurchasesRows = '<tr><td colspan="4" style="text-align: center;">No customer data available</td></tr>';
+}
+
+// Format date ranges for display
+$displayDateRange = date('F d, Y', strtotime($start_date));
+if ($start_date != $end_date) {
+    $displayDateRange .= ' to ' . date('F d, Y', strtotime($end_date));
+}
+
+// Close database connection
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -124,7 +163,6 @@ try {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
 <body class="bg-gray-50 font-sans">
     <div class="pl-0 lg:pl-64 transition-all duration-300">
@@ -149,7 +187,7 @@ try {
                         </form>
                         
                         <button id="printReport" class="bg-gray-800 text-white text-sm px-3 py-1.5 rounded-lg flex items-center">
-                            <i class="fas fa-print mr-1"></i> Print
+                            <i class="fas fa-print mr-1"></i> Print Report
                         </button>
                     </div>
                 </div>
@@ -157,8 +195,7 @@ try {
                 <div class="inline-flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
                     <i class="fas fa-calendar-alt mr-2"></i>
                     <span>
-                        <?= date('F d, Y', strtotime($start_date)) ?> 
-                        <?= ($start_date != $end_date) ? ' - ' . date('F d, Y', strtotime($end_date)) : '' ?>
+                        <?= $displayDateRange ?>
                     </span>
                 </div>
             </div>
@@ -337,9 +374,213 @@ try {
                 }
             });
             
-            // Print functionality
+            // Enhanced print functionality with separate window
             document.getElementById('printReport').addEventListener('click', function() {
-                window.print();
+                // Open a new window for printing
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
+                
+                // Create the print content
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>E-MEAT Sales Report</title>
+                        <style>
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                margin: 40px; 
+                                color: #333;
+                                line-height: 1.5;
+                            }
+                            h1 { 
+                                color: #cf1f1f; 
+                                margin-bottom: 10px; 
+                                font-size: 24px;
+                                text-align: center;
+                            }
+                            h2 { 
+                                color: #555; 
+                                margin-top: 30px; 
+                                margin-bottom: 15px;
+                                font-size: 18px;
+                                border-bottom: 1px solid #ddd;
+                                padding-bottom: 5px;
+                            }
+                            .report-header {
+                                text-align: center;
+                                margin-bottom: 30px;
+                                border-bottom: 2px solid #cf1f1f;
+                                padding-bottom: 20px;
+                            }
+                            .logo {
+                                max-height: 60px;
+                                display: block;
+                                margin: 0 auto 10px auto;
+                            }
+                            .report-subtitle {
+                                font-size: 16px;
+                                color: #777;
+                                margin-bottom: 5px;
+                            }
+                            .report-date { 
+                                color: #777; 
+                                margin-bottom: 20px;
+                                text-align: center;
+                                background-color: #f8f8f8;
+                                padding: 8px;
+                                border-radius: 4px;
+                                font-weight: bold;
+                            }
+                            .summary-cards {
+                                display: flex;
+                                justify-content: space-between;
+                                margin-bottom: 30px;
+                                flex-wrap: wrap;
+                            }
+                            .summary-card {
+                                width: 22%;
+                                padding: 15px;
+                                border: 1px solid #ddd;
+                                border-radius: 5px;
+                                text-align: center;
+                                margin-bottom: 15px;
+                            }
+                            .card-red { border-top: 4px solid #cf1f1f; }
+                            .card-blue { border-top: 4px solid #1f6fcf; }
+                            .card-green { border-top: 4px solid #1fcf4e; }
+                            .card-purple { border-top: 4px solid #8f1fcf; }
+                            .card-label {
+                                color: #777;
+                                font-size: 14px;
+                                margin-bottom: 5px;
+                            }
+                            .card-value {
+                                font-size: 22px;
+                                font-weight: bold;
+                            }
+                            table { 
+                                width: 100%; 
+                                border-collapse: collapse; 
+                                margin-bottom: 30px; 
+                            }
+                            th, td { 
+                                padding: 12px 15px; 
+                                text-align: left; 
+                                border-bottom: 1px solid #ddd; 
+                            }
+                            th { 
+                                background-color: #f8f8f8; 
+                                font-weight: bold; 
+                                color: #555;
+                                text-transform: uppercase;
+                                font-size: 12px;
+                            }
+                            tr:nth-child(even) {
+                                background-color: #f9f9f9;
+                            }
+                            .amount { 
+                                text-align: right; 
+                            }
+                            .total-row { 
+                                font-weight: bold; 
+                                background-color: #f0f0f0; 
+                            }
+                            .note { 
+                                font-size: 12px; 
+                                color: #777; 
+                                font-style: italic;
+                                margin-top: 40px;
+                                text-align: center;
+                                border-top: 1px solid #ddd;
+                                padding-top: 15px;
+                            }
+                            .center { text-align: center; }
+                            @media print {
+                                body { margin: 15mm; }
+                                .page-break { page-break-before: always; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="report-header">
+                            <img src="../IMAGES/RED LOGO.png" alt="E-MEAT" class="logo">
+                            <h1>E-MEAT SALES REPORT</h1>
+                            <div class="report-subtitle">Premium Quality Meats</div>
+                        </div>
+                        
+                        <p class="report-date">
+                            Report Period: ${<?= json_encode($displayDateRange) ?>}
+                        </p>
+                        
+                        <h2>SALES SUMMARY</h2>
+                        <div class="summary-cards">
+                            <div class="summary-card card-red">
+                                <div class="card-label">TOTAL SALES</div>
+                                <div class="card-value">${<?= json_encode(formatCurrency($overview['total_sales'])) ?>}</div>
+                            </div>
+                            
+                            <div class="summary-card card-blue">
+                                <div class="card-label">ORDERS</div>
+                                <div class="card-value">${<?= json_encode(number_format($overview['total_orders'])) ?>}</div>
+                            </div>
+                            
+                            <div class="summary-card card-green">
+                                <div class="card-label">AVG. ORDER VALUE</div>
+                                <div class="card-value">${<?= json_encode(formatCurrency($overview['avg_order_value'])) ?>}</div>
+                            </div>
+                            
+                            <div class="summary-card card-purple">
+                                <div class="card-label">CUSTOMERS</div>
+                                <div class="card-value">${<?= json_encode(number_format($overview['total_customers'])) ?>}</div>
+                            </div>
+                        </div>
+                        
+                        <h2>TOP SELLING PRODUCTS</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 50%;">Product</th>
+                                    <th style="width: 20%;">Quantity Sold</th>
+                                    <th style="width: 25%;" class="amount">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${<?= json_encode($topProductsRows) ?>}
+                            </tbody>
+                        </table>
+                        
+                        <h2>CUSTOMER PURCHASES</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 35%;">Customer</th>
+                                    <th style="width: 35%;">Email</th>
+                                    <th style="width: 10%;" class="center">Orders</th>
+                                    <th style="width: 20%;" class="amount">Total Spent</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${<?= json_encode($customerPurchasesRows) ?>}
+                            </tbody>
+                        </table>
+                        
+                        <p class="note">
+                            This report shows sales information for the period ${<?= json_encode($displayDateRange) ?>}.<br>
+                            Generated on ${<?= json_encode(date('F d, Y h:i A')) ?>}<br>
+                            E-MEAT Premium Quality Products &copy; ${<?= json_encode(date('Y')) ?>} - All Rights Reserved
+                        </p>
+                    </body>
+                    </html>
+                `);
+                
+                // Trigger print when content is loaded
+                printWindow.document.close();
+                printWindow.onload = function() {
+                    printWindow.print();
+                    // Optional: Close the window after printing
+                    // setTimeout(function() { printWindow.close(); }, 500);
+                };
             });
             
             // Sales Chart
@@ -389,5 +630,3 @@ try {
     </script>
 </body>
 </html>
-
-<?php $conn->close(); ?>
